@@ -93,15 +93,11 @@ struct Data {
 // we write (most of) them as macros.  Normal in-lining isn't aggressive
 // enough: we need the compiler to see that certain "variables" are in fact
 // compile-time constants, and optimize accordingly.
-//
-// We assume that the compiler can recognize divmod optimization opportunities
-// (rather than emitting one assembly instruction for / and a second for %);
-// this might require requesting -O3 optimization?
 
-// we divide a large number of values by the same divisor; on most machines,
-// division is much slower than multiplication; libdivide allows us to compute
-// a multiplicate inverse which can be used to achieve the bulk divisions using
-// bulk multiplications instead - a big performance win!
+// We divide a large number of values by the same divisor; on most machines,
+// division is much slower than multiplication; libdivide allows us to
+// compute a multiplicative inverse which can be used to achieve the bulk
+// divisions using bulk multiplications instead - a big performance win!
 use libdivide::Divider;
 
 // Written as a macro so that the compiler can observe a constant $sub and $denom
@@ -128,15 +124,17 @@ macro_rules! atan_grind {
      $nn:expr, $d:expr, $dinv:expr, $sub:expr) => { {
         // compute new term
         let v = $r1 * BASE + *$t;
-        $r1 = v % $nn; // $nn should be a compile-time constant, so the
-        *$t = v / $nn; // compiler should handle a libdivide-like optimization
+        // We assume that, at least for release builds, the compiler will
+        // do libdivide-like optimization on the compile-time constant $nn
+        *$t = v / $nn;
+        $r1 = v % $nn;
 
         // apply newly computed term to the running sum
         let v = $r2 * BASE + *$t;
         let q = v / $dinv; // use libdivide to replace actual division with
         $r2 = v - q*$d;    // multiplication-by-inverse logic
-        if $sub { *$s -= q } // $sub should be a compile-time constant, so this
-        else    { *$s += q } // should reduce to a single branch-free operation
+        if $sub { *$s -= q }  // $sub should be a compile-time constant, so this
+        else    { *$s += q }  // should reduce to a single branch-free operation
     } }
 }
 
@@ -148,11 +146,10 @@ macro_rules! atan_iter {
         let mut remainder3 :Xword = 0;
         let mut remainder2 :Xword = 0;
         let mut remainder1 :Xword = 0;
-        // we should see about using the libdivide crate to pre-compute inverses for these...
         let denom0 = $d.denom;
         let denom2 = $d.denom + 2;
-        let denom0inv = Divider::new(denom0).expect("libdivide initializaton error");
-        let denom2inv = Divider::new(denom2).expect("libdivide initializaton error");
+        let denom0inv = Divider::new(denom0).expect("libdivide initialization error");
+        let denom2inv = Divider::new(denom2).expect("libdivide initialization error");
         $d.denom += 4;
 
         for (t,s) in $d.term[$d.firstnonzero..].iter_mut()
