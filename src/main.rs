@@ -88,6 +88,8 @@ struct Data {
     denom: Xword,        // the denominator of the current iteration
 }
 
+enum SumOp { Increment, Decrement, Assign }
+
 //-----------------------------------------------------------------
 // The routines in this section are performance-critical, to the point that
 // we write (most of) them as macros.  Normal in-lining isn't aggressive
@@ -100,17 +102,29 @@ struct Data {
 // divisions using bulk multiplications instead - a big performance win!
 use libdivide::Divider;
 
-// Written as a macro so that the compiler can observe a constant $sub and $denom
+// DRY: this code snippet is used more than once...
+// Also, $op ought to be a compile-time constant, so the generated
+// code should just become one unconditional op.
+macro_rules! update_op {
+    ($dst:ident, $src:expr, $op: expr) => { {
+        match $op {
+            SumOp::Increment => *$dst += $src,
+            SumOp::Decrement => *$dst -= $src,
+            SumOp::Assign    => *$dst  = $src,
+        }
+    } }
+}
+
+// Written as a macro so that the compiler can observe a constant $op and $denom
 // (This isn't an inner loop, so perhaps this is a gratuitous optimization.)
 macro_rules! init_term {
-    ($d: ident, $numer:expr, $denom:expr, $sub:expr) => { {
+    ($d: ident, $numer:expr, $denom:expr, $op:expr) => { {
         let mut r = $numer;
-        for (t,s) in $d.term.iter_mut()
+        for (term,sum) in $d.term.iter_mut()
                  .zip($d.sum.iter_mut()) {
-            *t = r / $denom;
+            *term = r / $denom;
             r = r % $denom * BASE;
-            if $sub { *s -= *t }
-            else    { *s += *t }
+            update_op!(sum, *term, $op);
         }
         $d.firstnonzero=0; $d.denom=3;
     } }
@@ -120,28 +134,27 @@ macro_rules! init_term {
 // constants. This is an innermost-loop calculation, so optimizing it
 // is important for performance.
 macro_rules! atan_grind {
-    ($r1:ident, $r2:ident, $t:ident, $s:ident,
-     $nn:expr, $d:expr, $dinv:expr, $sub:expr) => { {
+    ($r1:ident, $r2:ident, $term:ident, $sum:ident,
+     $nn:expr, $d:expr, $dinv:expr, $op:expr) => { {
         // compute new term
-        let v = $r1 * BASE + *$t;
+        let v = $r1 * BASE + *$term;
         // We assume that, at least for release builds, the compiler will
         // do libdivide-like optimization on the compile-time constant $nn
-        *$t = v / $nn;
+        *$term = v / $nn;
         $r1 = v % $nn;
 
         // apply newly computed term to the running sum
-        let v = $r2 * BASE + *$t;
+        let v = $r2 * BASE + *$term;
         let q = v / $dinv; // use libdivide to replace actual division with
         $r2 = v - q*$d;    // multiplication-by-inverse logic
-        if $sub { *$s -= q }  // $sub should be a compile-time constant, so this
-        else    { *$s += q }  // should reduce to a single branch-free operation
+        update_op!($sum, q, $op);
     } }
 }
 
-// We write this a macro so that $n*$n and $subfirst can be passed through
+// We write this a macro so that $n*$n, $op1, and $op2 can be passed through
 // to atan_grind!() as compile-time constants.
 macro_rules! atan_iter {
-    ($d:ident, $n:expr, $subfirst:expr) => { {
+    ($d:ident, $n:expr, $op1:expr, $op2:expr) => { {
         let mut remainder4 :Xword = 0;
         let mut remainder3 :Xword = 0;
         let mut remainder2 :Xword = 0;
@@ -152,10 +165,12 @@ macro_rules! atan_iter {
         let denom2inv = Divider::new(denom2).expect("libdivide initialization error");
         $d.denom += 4;
 
-        for (t,s) in $d.term[$d.firstnonzero..].iter_mut()
+        for (term,sum) in $d.term[$d.firstnonzero..].iter_mut()
                  .zip($d.sum[$d.firstnonzero..].iter_mut()) {
-            atan_grind!(remainder1, remainder2, t, s, $n*$n, denom0, &denom0inv, $subfirst);
-            atan_grind!(remainder3, remainder4, t, s, $n*$n, denom2, &denom2inv, !$subfirst);
+            atan_grind!(remainder1, remainder2, term, sum,
+                        $n*$n, denom0, &denom0inv, $op1);
+            atan_grind!(remainder3, remainder4, term, sum,
+                        $n*$n, denom2, &denom2inv, $op2);
         }
 
         let nword = $d.term.len();
@@ -235,10 +250,14 @@ fn main() {
     use cpu_time::ProcessTime;
     let start = ProcessTime::now();
 
-    init_term!(d, SCALE*4, 5, false);
-    while d.firstnonzero < nwords { atan_iter!(d, 5, true) }
-    init_term!(d, SCALE, 239, true);
-    while d.firstnonzero < nwords { atan_iter!(d, 239, false) }
+    init_term!(d, SCALE*4, 5, SumOp::Assign);
+    while d.firstnonzero < nwords {
+        atan_iter!(d, 5, SumOp::Decrement, SumOp::Increment);
+    }
+    init_term!(d, SCALE, 239, SumOp::Decrement);
+    while d.firstnonzero < nwords {
+        atan_iter!(d, 239, SumOp::Increment, SumOp::Decrement);
+    }
     fixup(&mut d);
 
     let elapsed = start.elapsed();
