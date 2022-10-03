@@ -46,23 +46,24 @@ const_assert!(MINDIGITS <= DEFDIGITS && DEFDIGITS <= MAXDIGITS);
 
     Demonstration that 4*atan(1/5) - atan(1/239) == atan(1):
       Recall that:
-        tan(a+b) = (tan(a) + tan(b)) / (1 - tan(a)*tan(b))
+        tan(x+y) = (tan(x) + tan(y)) / (1 - tan(x)*tan(y))
+      and, by the nature of inverse functions,
+        x = atan(tan(x)) = tan(atan(x))
+      Therefore:
+        atan(x) + atan(y)
+          = atan( tan(atan(x) + atan(y)) )
+          = atan( (tan(atan(x)) + tan(atan(y))) / (1 - tan(atan(x))*tan(atan(y))) )
+          = atan( (x + y) / (1 - x*y) )
+      And, as a special case,
+        2 atan(x) = atan(2x / (1-x^2))
 
-      Let tan(x) = A; equiv. x = atan(A), then
-        tan(2x) = (A+A) / (1-A*A)
-        2x = 2 atan(A) = atan(2A / (1-A^2))
       Thus:
         4 atan(1/5)
           = 2 atan((2/5) / (1 - 1/25))
           = 2 atan(5/12)
           = atan((10/12) / (1 - 25/144))
           = atan(120/119)
-
-      Now,
-        atan(x) + atan(y)
-          = atan( tan( atan(x) + atan(y) ) )
-          = atan((x+y) / (1 - x*y))
-      so,
+      And therefore:
         4*atan(1/5) - atan(1/239)
           = atan(120/119) + atan(-1/239)
           = atan((120/119 - 1/239) / (1 - 120/119 * -1/239))
