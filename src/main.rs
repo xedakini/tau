@@ -23,7 +23,6 @@ type Xword = i64; // must be able to hold signed values up to 100**WORDDIGITS
 // more pedestrian modifiable values:
 const SCALE     :Xword = 8;       //we will compute SCALE*atan(1); thus 8 will compute tau
 const LINELEN   :usize = 80;      //keep output lines no longer than this length
-const ERRPAD    :usize = 2;       //words of padding to absorb rounding errors; heuristic
 const MINDIGITS :usize = 18;      //base-10 digits; somewhat arbitrary constraint?
 const DEFDIGITS :usize = 288;     //the default number of base-10 digits to output
 const MAXDIGITS :usize = 1200000; //base-10 digits; somewhat arbitrary limit?
@@ -266,7 +265,7 @@ fn printout(sum: Vec<Xword>) {
 
     const WORDS_PER_LINE :usize = LINELEN / (WORDDIGITS+1);
     let mut c = WORDS_PER_LINE;
-    for v in sum[1..=sum.len()-ERRPAD].iter() {
+    for v in sum[1..sum.len()-1].iter() {
         if c >= WORDS_PER_LINE { println!(""); c = 0 }
         c += 1;
         print!(" {value:0>width$}", width=WORDDIGITS, value=v);
@@ -275,7 +274,7 @@ fn printout(sum: Vec<Xword>) {
 }
 
 fn main() {
-    let nwords = get_nwords() + ERRPAD;
+    let nwords = 1 + get_nwords() + 1; // 1 left-of-decimal word; 1 error-terms word
     let mut d = Data {
         term: vec![0; nwords],
         sum:  vec![0; nwords],
