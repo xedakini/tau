@@ -59,11 +59,35 @@ const_assert!(MINDIGITS <= DEFDIGITS && DEFDIGITS <= MAXDIGITS);
           = atan(120/119)
 
       Now,
+        atan(x) + atan(y)
+          = atan( tan( atan(x) + atan(y) ) )
+          = atan((x+y) / (1 - x*y))
+      so,
         4*atan(1/5) - atan(1/239)
           = atan(120/119) + atan(-1/239)
-          = atan(tan(atan(120/119) + atan(-1/239)))
           = atan((120/119 - 1/239) / (1 - 120/119 * -1/239))
           = atan(1)
+          QED
+
+
+    Another identity is atan(1) = 8*atan(1/10) - atan(1/239) - 4*atan(1/515).
+    This has the disadvantage of requiring three passes, but has the advantage
+    that the series for 1/10 converges faster than the series for 1/5, and
+    the 1/515 series converges very rapidly.
+
+    The validity of this identity is demonstrated by:
+        8 atan(1/10)
+          = 4 atan(20/99)
+          = 2 atan(3960/9401)
+          = atan(74455920/72697201)
+
+        4 atan(1/515)
+          = 2 atan(515/132612)
+          = atan(136590360/17585677319)
+
+        8 atan(1/10) - atan(1/239) - 4 atan(1/515)
+	      = atan(74455920/72697201) - atan(1758719/147153121)
+	      = atan(1)
           QED
 
    Putting this all together, and running calculations using multi-precision
@@ -180,6 +204,16 @@ macro_rules! atan_iter {
     } }
 }
 
+// this is just a macro so that constant arguments are propagated aggressively
+macro_rules! atan_loop {
+    ($d:ident, $nwords:expr, $numer:expr, $denom:expr, $op0:expr, $op1:expr, $op2:expr) => { {
+        init_term!($d, $numer, $denom, $op0);
+        while $d.firstnonzero < $nwords {
+            atan_iter!($d, $denom, $op1, $op2);
+        }
+    } }
+}
+
 // No macro-magic is required here
 fn fixup(d: &mut Data) {
     // fix-up any out-of-spec digits
@@ -250,14 +284,11 @@ fn main() {
     use cpu_time::ProcessTime;
     let start = ProcessTime::now();
 
-    init_term!(d, SCALE*4, 5, SumOp::Assign);
-    while d.firstnonzero < nwords {
-        atan_iter!(d, 5, SumOp::Decrement, SumOp::Increment);
-    }
-    init_term!(d, SCALE, 239, SumOp::Decrement);
-    while d.firstnonzero < nwords {
-        atan_iter!(d, 239, SumOp::Increment, SumOp::Decrement);
-    }
+    // atan_loop!(d, nwords, SCALE*4,   5, SumOp::Assign,    SumOp::Decrement, SumOp::Increment);
+    // atan_loop!(d, nwords, SCALE*1, 239, SumOp::Decrement, SumOp::Increment, SumOp::Decrement);
+    atan_loop!(d, nwords, SCALE*8,  10, SumOp::Assign,    SumOp::Decrement, SumOp::Increment);
+    atan_loop!(d, nwords, SCALE*1, 239, SumOp::Decrement, SumOp::Increment, SumOp::Decrement);
+    atan_loop!(d, nwords, SCALE*4, 515, SumOp::Decrement, SumOp::Increment, SumOp::Decrement);
     fixup(&mut d);
 
     let elapsed = start.elapsed();
