@@ -126,37 +126,24 @@ use libdivide::Divider;
 
 enum SumOp { Increment, Decrement }
 
-// DRY: this code snippet is used more than once...
-// Also, $op ought to be a compile-time constant, so the generated
-// code should just become one unconditional op.
-macro_rules! update_op {
-    ($dst:ident, $src:expr, $op: expr) => { {
-        match $op {
-            SumOp::Increment => *$dst += $src,
-            SumOp::Decrement => *$dst -= $src,
-        }
-    } }
-}
-
 // Written as a macro so that the compiler can observe a constant $denom.
 // (This isn't an inner loop, so perhaps this is a gratuitous optimization.)
 macro_rules! init_term {
     ($d: ident, $nwords:expr, $numer:expr, $denom:expr) => { {
         $d.term.truncate(0); //probably redundant, but just to be sure...
         let mut r = $numer;
-        for _ in 0..$nwords {
-            $d.term.push(r / $denom);
-            r = r % $denom * BASE;
-        }
+        $d.term.resize_with($nwords,
+                  ||{ let v = r / $denom; r = r % $denom * BASE; v });
         $d.sum.truncate(0); //probably redundant, but just to be sure...
         $d.sum.extend_from_slice($d.term.as_slice());
-        $d.firstnonzero=0; $d.denom=3;
+        $d.firstnonzero = 0;
+        $d.denom = 3;
     } }
 }
 
-// We write this as a macro so that the compiler sees $nn and $sub as
-// constants. This is an innermost-loop calculation, so optimizing it
-// is important for performance.
+// We write this as a macro so that the compiler sees $nn and $op as
+// constants.  This is an innermost-loop calculation, so optimizing
+// it is important for performance.
 macro_rules! atan_grind {
     ($r1:ident, $r2:ident, $term:ident, $sum:ident,
      $nn:expr, $d:expr, $dinv:expr, $op:expr) => { {
@@ -171,7 +158,12 @@ macro_rules! atan_grind {
         let v = $r2 * BASE + *$term;
         let q = v / $dinv; // use libdivide to replace actual division with
         $r2 = v - q*$d;    // multiplication-by-inverse logic
-        update_op!($sum, q, $op);
+        match $op {
+            // $op ought to be a compile-time constant, so the generated
+            // code should just become one unconditional op.
+            SumOp::Increment => *$sum += q,
+            SumOp::Decrement => *$sum -= q,
+        }
     } }
 }
 
@@ -206,11 +198,15 @@ macro_rules! atan_iter {
 
 // this is just a macro so that a constant $denom is propagated aggressively
 macro_rules! atan_loop {
-    ($d:ident, $nwords:expr, $numer:expr, $denom:expr) => { {
-        init_term!($d, $nwords, $numer, $denom);
-        while $d.firstnonzero < $nwords {
-            atan_iter!($d, $denom);
-        }
+    ($nwords:expr, $numer:expr, $denom:expr) => { {
+        let mut d = Data {
+            term: Vec::with_capacity($nwords),
+            sum: Vec::with_capacity($nwords),
+            ..Default::default()
+        };
+        init_term!(d, $nwords, $numer, $denom);
+        while d.firstnonzero < $nwords { atan_iter!(d, $denom) }
+        d.sum
     } }
 }
 
@@ -263,45 +259,31 @@ fn printout(sum: Vec<Xword>) {
 }
 
 fn main() {
-    let nwords = 1 + get_nwords() + 1; // 1 left-of-decimal word; 1 error-terms word
-    let mut d10 = Data {
-        term: Vec::with_capacity(nwords),
-        sum: Vec::with_capacity(nwords),
-        ..Default::default()
-    };
-    let mut d239 = Data {
-        term: Vec::with_capacity(nwords),
-        sum: Vec::with_capacity(nwords),
-        ..Default::default()
-    };
-    let mut d515 = Data {
-        term: Vec::with_capacity(nwords),
-        sum: Vec::with_capacity(nwords),
-        ..Default::default()
-    };
-
+    //use std::thread;
     use cpu_time::ProcessTime;
+    let nwords = 1 + get_nwords() + 1; // 1 left-of-decimal word; 1 error-terms word
     let start = ProcessTime::now();
 
-    // atan_loop!(d, nwords, SCALE*4,   5); atan_loop!(d, nwords, SCALE*1, 239);
-    atan_loop!(d10,  nwords, SCALE*8,  10);
-    atan_loop!(d239, nwords, SCALE*1, 239);
-    atan_loop!(d515, nwords, SCALE*4, 515);
+    // alternative formulation: 4*atan(1/5) - atan(1/239)
+    // this formulation: 8*atan(1/10) - atan(1/239) - atan(1/515)
+    let s515 = atan_loop!(nwords, SCALE*4, 515);
+    let s239 = atan_loop!(nwords, SCALE*1, 239);
+    let mut s = atan_loop!(nwords, SCALE*8, 10);
 
-    // combine sums (into d10) while fixing-up any out-of-spec digits
+    // combine sums (into s) while fixing-up any out-of-spec digits
     let mut r1 :Xword = 0;
-    for i in (0..d10.sum.len()).rev() {
-        let mut r0 = r1 + d10.sum[i] - d239.sum[i] - d515.sum[i];
+    for i in (0..s.len()).rev() {
+        let mut r0 = r1 + s[i] - s239[i] - s515[i];
         r1 = 0;
         // digits are typically close-enough to in-spec that doing
         // a division will be more expensive than this loop pair
         while r0 < 0     { r0+=BASE; r1-=1 }
         while BASE <= r0 { r0-=BASE; r1+=1 }
-        d10.sum[i] = r0;
+        s[i] = r0;
     }
     assert!(r1 == 0);
 
     let elapsed = start.elapsed();
-    printout(d10.sum);
+    printout(s);
     println!("Computation time = {:.2?}", elapsed);
 }
