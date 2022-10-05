@@ -259,22 +259,22 @@ fn main() {
     // alternative formulation: 4*atan(1/5) - atan(1/239)
     // this formulation: 8*atan(1/10) - atan(1/239) - atan(1/515)
 
-    let mut s; let s239; let s515;
+    let s10; let s239; let s515;
     const USE_THREADS :bool = false;
     if USE_THREADS {
         use std::thread;
         let t10  = thread::spawn(move || { atan_loop!(nwords, SCALE*8,  10) } );
         let t239 = thread::spawn(move || { atan_loop!(nwords, SCALE*1, 239) } );
-        let t515 = thread::spawn(move || { atan_loop!(nwords, SCALE*4, 515) } );
-        s515 = t515.join().expect("the atan(1/515) thread panicked");
+        s515 = atan_loop!(nwords, SCALE*4, 515);
         s239 = t239.join().expect("the atan(1/239) thread panicked");
-        s = t10.join().expect("the atan(1/10) thread panicked");
+        s10  = t10.join().expect("the atan(1/10) thread panicked");
     } else {
         s515 = atan_loop!(nwords, SCALE*4, 515);
         s239 = atan_loop!(nwords, SCALE*1, 239);
-        s = atan_loop!(nwords, SCALE*8, 10);
+        s10  = atan_loop!(nwords, SCALE*8,  10);
     }
 
+    let mut s = s10;
     // combine sums (into s) while fixing-up any out-of-spec digits
     let mut carry :Xword = 0;
     for i in (0..s.len()).rev() {
