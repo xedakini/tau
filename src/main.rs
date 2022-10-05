@@ -6,12 +6,14 @@
      Date: 16 Feb 1997 07:25:10 GMT
      Message-ID: <5e6com$j3e@hecate.umd.edu>
 
-   The core idea of computing N*(4*atan(1/5)-atan(1/239)) remains, and
-   the basic approach to multi-precision calculation is the same. Otherwise,
-   apart from some random vestiges (such as error messages for the argument
-   parsing), this is a complete rewrite in rust.  Also note that the default
-   has been changed here to compute 8*atan(1) (aka "tau") instead of
-   4*atan(1) (aka "pi").  --kpp 2022-10-01
+   The core idea of computing N*atan(1) [for a mathematically
+   equivalent but computationally better behaved expression] remains,
+   and the basic approach to multi-precision calculation is the
+   same. Otherwise, apart from some random vestiges (such as error
+   messages for the argument parsing), this is a complete rewrite
+   in rust.  Also note that the default has been changed here to
+   compute 8*atan(1) (aka "tau") instead of 4*atan(1) (aka "pi").
+   --kpp 2022-10-04
 */
 
 // --- customizable section ---
