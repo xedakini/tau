@@ -173,38 +173,32 @@ macro_rules! atan_grind {
     } }
 }
 
-// We write this a macro so that $n*$n can be passed through
-// to atan_grind!() as a compile-time constant.
-macro_rules! atan_iter {
-    ($d:ident, $n:expr) => { {
-        let mut remainder1 :Xword = 0;
-        let mut remainder2 :Xword = 0;
-        let mut remainder3 :Xword = 0;
-        let mut remainder4 :Xword = 0;
-        let (denom0, denom0inv) = next_denom(&mut $d);
-        let (denom2, denom2inv) = next_denom(&mut $d);
-
-        for (term,sum) in $d.term[$d.firstnonzero..].iter_mut()
-                 .zip($d.sum[$d.firstnonzero..].iter_mut()) {
-            atan_grind!(remainder1, remainder2, term, sum,
-                        $n*$n, denom0, &denom0inv, SumOp::Decrement);
-            atan_grind!(remainder3, remainder4, term, sum,
-                        $n*$n, denom2, &denom2inv, SumOp::Increment);
-        }
-
-        let nword = $d.term.len();
-        while $d.firstnonzero < nword && $d.term[$d.firstnonzero] == 0 {
-            $d.firstnonzero += 1;
-        }
-    } }
-}
-
 // this is just a macro so that a constant $denom is propagated aggressively
 macro_rules! atan_loop {
     ($nwords:expr, $numer:expr, $denom:expr) => { {
         let mut d = Data { ..Default::default() };
         init_term!(d, $nwords, $numer, $denom);
-        while d.firstnonzero < $nwords { atan_iter!(d, $denom) }
+        while d.firstnonzero < $nwords {
+            let mut remainder1 :Xword = 0;
+            let mut remainder2 :Xword = 0;
+            let mut remainder3 :Xword = 0;
+            let mut remainder4 :Xword = 0;
+            let (denom0, denom0inv) = next_denom(&mut d);
+            let (denom2, denom2inv) = next_denom(&mut d);
+
+            for (term,sum) in d.term[d.firstnonzero..].iter_mut()
+                     .zip(d.sum[d.firstnonzero..].iter_mut()) {
+                atan_grind!(remainder1, remainder2, term, sum, $denom*$denom,
+                            denom0, &denom0inv, SumOp::Decrement);
+                atan_grind!(remainder3, remainder4, term, sum, $denom*$denom,
+                            denom2, &denom2inv, SumOp::Increment);
+            }
+
+            let nword = d.term.len();
+            while d.firstnonzero < nword && d.term[d.firstnonzero] == 0 {
+                d.firstnonzero += 1;
+            }
+        }
         d.sum
     } }
 }
