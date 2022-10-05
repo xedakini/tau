@@ -35,6 +35,14 @@ const MAXDIGITS :usize = 1200000; //base-10 digits; somewhat arbitrary limit?
 extern crate static_assertions;
 const_assert!(MINDIGITS <= DEFDIGITS && DEFDIGITS <= MAXDIGITS);
 
+// derive "BASE" from WORDDIGITS
+const fn pow10(mut n: usize) -> Xword {
+    let mut v :Xword = 1;
+    while 0 < n { v *= 10; n -= 1 }
+    v
+}
+const BASE :Xword = pow10(WORDDIGITS); //we adjust computations to be in this base
+
 /*
    Taylor-Maclaurin series for atan(x) (when abs(x) <= 1):
        atan(x) = \sum_0^\infty (-1)^n x^{2n+1} / {2n+1}
@@ -96,15 +104,11 @@ const_assert!(MINDIGITS <= DEFDIGITS && DEFDIGITS <= MAXDIGITS);
    arithmetic with "digit"s of base BASE is how this code accomplishes its task.
  */
 
-
 //-----------------------------------------------------------------
-// derive "BASE" from WORDDIGITS
-const fn pow10(mut n: usize) -> Xword {
-    let mut v :Xword = 1;
-    while 0 < n { v *= 10; n -= 1 }
-    v
-}
-const BASE :Xword = pow10(WORDDIGITS); //we adjust computations to be in this base
+// The routines in this section are performance-critical, to the point that
+// we write (most of) them as macros.  Normal in-lining isn't aggressive
+// enough: we need the compiler to see that certain "variables" are in fact
+// compile-time constants, and optimize accordingly.
 
 #[derive(Default)]
 struct Data {
@@ -114,19 +118,13 @@ struct Data {
     denom: Xword,        // the denominator of the current iteration
 }
 
-//-----------------------------------------------------------------
-// The routines in this section are performance-critical, to the point that
-// we write (most of) them as macros.  Normal in-lining isn't aggressive
-// enough: we need the compiler to see that certain "variables" are in fact
-// compile-time constants, and optimize accordingly.
+enum SumOp { Increment, Decrement }
 
 // We divide a large number of values by the same divisor; on most machines,
 // division is much slower than multiplication; libdivide allows us to
 // compute a multiplicative inverse which can be used to achieve the bulk
 // divisions using bulk multiplications instead - a big performance win!
 use libdivide::Divider;
-
-enum SumOp { Increment, Decrement }
 
 // Written as a macro so that the compiler can observe a constant $denom.
 // (This isn't an inner loop, so perhaps this is a gratuitous optimization.)
@@ -189,7 +187,7 @@ macro_rules! atan_loop {
             let (denom2, denom2inv) = next_denom(&mut d);
 
             for (term,sum) in d.term[d.firstnonzero..].iter_mut()
-                     .zip(d.sum[d.firstnonzero..].iter_mut()) {
+                          .zip(d.sum[d.firstnonzero..].iter_mut()) {
                 atan_grind!(remainder1, remainder2, term, sum, $denom*$denom,
                             denom0, &denom0inv, SumOp::Decrement);
                 atan_grind!(remainder3, remainder4, term, sum, $denom*$denom,
@@ -278,17 +276,17 @@ fn main() {
     }
 
     // combine sums (into s) while fixing-up any out-of-spec digits
-    let mut r1 :Xword = 0;
+    let mut carry :Xword = 0;
     for i in (0..s.len()).rev() {
-        let mut r0 = r1 + s[i] - s239[i] - s515[i];
-        r1 = 0;
+        let mut v = carry + s[i] - s239[i] - s515[i];
+        carry = 0;
         // digits are typically close-enough to in-spec that doing
         // a division will be more expensive than this loop pair
-        while r0 < 0     { r0+=BASE; r1-=1 }
-        while BASE <= r0 { r0-=BASE; r1+=1 }
-        s[i] = r0;
+        while v < 0     { v+=BASE; carry-=1 }
+        while BASE <= v { v-=BASE; carry+=1 }
+        s[i] = v;
     }
-    assert!(r1 == 0);
+    assert!(carry == 0);
 
     let elapsed = start.elapsed();
     printout(s);
