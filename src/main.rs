@@ -259,16 +259,28 @@ fn printout(sum: Vec<Xword>) {
 }
 
 fn main() {
-    //use std::thread;
     use cpu_time::ProcessTime;
     let nwords = 1 + get_nwords() + 1; // 1 left-of-decimal word; 1 error-terms word
     let start = ProcessTime::now();
 
     // alternative formulation: 4*atan(1/5) - atan(1/239)
     // this formulation: 8*atan(1/10) - atan(1/239) - atan(1/515)
-    let s515 = atan_loop!(nwords, SCALE*4, 515);
-    let s239 = atan_loop!(nwords, SCALE*1, 239);
-    let mut s = atan_loop!(nwords, SCALE*8, 10);
+
+    const USE_THREADS :bool = false;
+    let mut s; let s239; let s515;
+    if USE_THREADS {
+        use std::thread;
+        let t10  = thread::spawn(move || { atan_loop!(nwords, SCALE*8,  10) } );
+        let t239 = thread::spawn(move || { atan_loop!(nwords, SCALE*1, 239) } );
+        let t515 = thread::spawn(move || { atan_loop!(nwords, SCALE*4, 515) } );
+        s515 = t515.join().expect("the atan(1/515) thread panicked");
+        s239 = t239.join().expect("the atan(1/239) thread panicked");
+        s = t10.join().expect("the atan(1/10) thread panicked");
+    } else {
+        s515 = atan_loop!(nwords, SCALE*4, 515);
+        s239 = atan_loop!(nwords, SCALE*1, 239);
+        s = atan_loop!(nwords, SCALE*8, 10);
+    }
 
     // combine sums (into s) while fixing-up any out-of-spec digits
     let mut r1 :Xword = 0;
