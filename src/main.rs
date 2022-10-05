@@ -130,15 +130,21 @@ enum SumOp { Increment, Decrement }
 // (This isn't an inner loop, so perhaps this is a gratuitous optimization.)
 macro_rules! init_term {
     ($d: ident, $nwords:expr, $numer:expr, $denom:expr) => { {
-        $d.term.truncate(0); //probably redundant, but just to be sure...
+        $d.term.truncate(0);
         let mut r = $numer;
         $d.term.resize_with($nwords,
                   ||{ let v = r / $denom; r = r % $denom * BASE; v });
-        $d.sum.truncate(0); //probably redundant, but just to be sure...
+        $d.sum.truncate(0);
         $d.sum.extend_from_slice($d.term.as_slice());
         $d.firstnonzero = 0;
-        $d.denom = 3;
+        $d.denom = 1;
     } }
+}
+
+fn next_denom(d: &mut Data) -> (Xword, Divider<Xword>) {
+    d.denom += 2;
+    let inv = Divider::new(d.denom).expect("libdivide initialization error");
+    (d.denom, inv)
 }
 
 // We write this as a macro so that the compiler sees $nn and $op as
@@ -171,15 +177,12 @@ macro_rules! atan_grind {
 // to atan_grind!() as a compile-time constant.
 macro_rules! atan_iter {
     ($d:ident, $n:expr) => { {
-        let mut remainder4 :Xword = 0;
-        let mut remainder3 :Xword = 0;
-        let mut remainder2 :Xword = 0;
         let mut remainder1 :Xword = 0;
-        let denom0 = $d.denom;
-        let denom2 = $d.denom + 2;
-        let denom0inv = Divider::new(denom0).expect("libdivide initialization error");
-        let denom2inv = Divider::new(denom2).expect("libdivide initialization error");
-        $d.denom += 4;
+        let mut remainder2 :Xword = 0;
+        let mut remainder3 :Xword = 0;
+        let mut remainder4 :Xword = 0;
+        let (denom0, denom0inv) = next_denom(&mut $d);
+        let (denom2, denom2inv) = next_denom(&mut $d);
 
         for (term,sum) in $d.term[$d.firstnonzero..].iter_mut()
                  .zip($d.sum[$d.firstnonzero..].iter_mut()) {
@@ -199,11 +202,7 @@ macro_rules! atan_iter {
 // this is just a macro so that a constant $denom is propagated aggressively
 macro_rules! atan_loop {
     ($nwords:expr, $numer:expr, $denom:expr) => { {
-        let mut d = Data {
-            term: Vec::with_capacity($nwords),
-            sum: Vec::with_capacity($nwords),
-            ..Default::default()
-        };
+        let mut d = Data { ..Default::default() };
         init_term!(d, $nwords, $numer, $denom);
         while d.firstnonzero < $nwords { atan_iter!(d, $denom) }
         d.sum
@@ -259,15 +258,15 @@ fn printout(sum: Vec<Xword>) {
 }
 
 fn main() {
-    use cpu_time::ProcessTime;
     let nwords = 1 + get_nwords() + 1; // 1 left-of-decimal word; 1 error-terms word
+    use cpu_time::ProcessTime;
     let start = ProcessTime::now();
 
     // alternative formulation: 4*atan(1/5) - atan(1/239)
     // this formulation: 8*atan(1/10) - atan(1/239) - atan(1/515)
 
-    const USE_THREADS :bool = false;
     let mut s; let s239; let s515;
+    const USE_THREADS :bool = false;
     if USE_THREADS {
         use std::thread;
         let t10  = thread::spawn(move || { atan_loop!(nwords, SCALE*8,  10) } );
