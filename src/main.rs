@@ -112,8 +112,6 @@ struct Data {
     denom: Xword,        // the denominator of the current iteration
 }
 
-enum SumOp { Increment, Decrement, Assign }
-
 //-----------------------------------------------------------------
 // The routines in this section are performance-critical, to the point that
 // we write (most of) them as macros.  Normal in-lining isn't aggressive
@@ -126,6 +124,8 @@ enum SumOp { Increment, Decrement, Assign }
 // divisions using bulk multiplications instead - a big performance win!
 use libdivide::Divider;
 
+enum SumOp { Increment, Decrement }
+
 // DRY: this code snippet is used more than once...
 // Also, $op ought to be a compile-time constant, so the generated
 // code should just become one unconditional op.
@@ -134,22 +134,22 @@ macro_rules! update_op {
         match $op {
             SumOp::Increment => *$dst += $src,
             SumOp::Decrement => *$dst -= $src,
-            SumOp::Assign    => *$dst  = $src,
         }
     } }
 }
 
-// Written as a macro so that the compiler can observe a constant $op and $denom
+// Written as a macro so that the compiler can observe a constant $denom.
 // (This isn't an inner loop, so perhaps this is a gratuitous optimization.)
 macro_rules! init_term {
-    ($d: ident, $numer:expr, $denom:expr, $op:expr) => { {
+    ($d: ident, $nwords:expr, $numer:expr, $denom:expr) => { {
+        $d.term.truncate(0); //probably redundant, but just to be sure...
         let mut r = $numer;
-        for (term,sum) in $d.term.iter_mut()
-                 .zip($d.sum.iter_mut()) {
-            *term = r / $denom;
+        for _ in 0..$nwords {
+            $d.term.push(r / $denom);
             r = r % $denom * BASE;
-            update_op!(sum, *term, $op);
         }
+        $d.sum.truncate(0); //probably redundant, but just to be sure...
+        $d.sum.extend_from_slice($d.term.as_slice());
         $d.firstnonzero=0; $d.denom=3;
     } }
 }
@@ -175,10 +175,10 @@ macro_rules! atan_grind {
     } }
 }
 
-// We write this a macro so that $n*$n, $op1, and $op2 can be passed through
-// to atan_grind!() as compile-time constants.
+// We write this a macro so that $n*$n can be passed through
+// to atan_grind!() as a compile-time constant.
 macro_rules! atan_iter {
-    ($d:ident, $n:expr, $op1:expr, $op2:expr) => { {
+    ($d:ident, $n:expr) => { {
         let mut remainder4 :Xword = 0;
         let mut remainder3 :Xword = 0;
         let mut remainder2 :Xword = 0;
@@ -192,9 +192,9 @@ macro_rules! atan_iter {
         for (term,sum) in $d.term[$d.firstnonzero..].iter_mut()
                  .zip($d.sum[$d.firstnonzero..].iter_mut()) {
             atan_grind!(remainder1, remainder2, term, sum,
-                        $n*$n, denom0, &denom0inv, $op1);
+                        $n*$n, denom0, &denom0inv, SumOp::Decrement);
             atan_grind!(remainder3, remainder4, term, sum,
-                        $n*$n, denom2, &denom2inv, $op2);
+                        $n*$n, denom2, &denom2inv, SumOp::Increment);
         }
 
         let nword = $d.term.len();
@@ -204,25 +204,14 @@ macro_rules! atan_iter {
     } }
 }
 
-// this is just a macro so that constant arguments are propagated aggressively
+// this is just a macro so that a constant $denom is propagated aggressively
 macro_rules! atan_loop {
-    ($d:ident, $nwords:expr, $numer:expr, $denom:expr, $op0:expr, $op1:expr, $op2:expr) => { {
-        init_term!($d, $numer, $denom, $op0);
+    ($d:ident, $nwords:expr, $numer:expr, $denom:expr) => { {
+        init_term!($d, $nwords, $numer, $denom);
         while $d.firstnonzero < $nwords {
-            atan_iter!($d, $denom, $op1, $op2);
+            atan_iter!($d, $denom);
         }
     } }
-}
-
-// No macro-magic is required here
-fn fixup(d: &mut Data) {
-    // fix-up any out-of-spec digits
-    for i in (1..d.sum.len()).rev() {
-        // digits are typically close-enough to in-spec that doing
-        // a division will be more expensive than this loop pair
-        while d.sum[i] < 0     { d.sum[i]+=BASE; d.sum[i-1]-=1 }
-        while BASE <= d.sum[i] { d.sum[i]-=BASE; d.sum[i-1]+=1 }
-    }
 }
 
 //-----------------------------------------------------------------
@@ -275,23 +264,44 @@ fn printout(sum: Vec<Xword>) {
 
 fn main() {
     let nwords = 1 + get_nwords() + 1; // 1 left-of-decimal word; 1 error-terms word
-    let mut d = Data {
-        term: vec![0; nwords],
-        sum:  vec![0; nwords],
+    let mut d10 = Data {
+        term: Vec::with_capacity(nwords),
+        sum: Vec::with_capacity(nwords),
+        ..Default::default()
+    };
+    let mut d239 = Data {
+        term: Vec::with_capacity(nwords),
+        sum: Vec::with_capacity(nwords),
+        ..Default::default()
+    };
+    let mut d515 = Data {
+        term: Vec::with_capacity(nwords),
+        sum: Vec::with_capacity(nwords),
         ..Default::default()
     };
 
     use cpu_time::ProcessTime;
     let start = ProcessTime::now();
 
-    // atan_loop!(d, nwords, SCALE*4,   5, SumOp::Assign,    SumOp::Decrement, SumOp::Increment);
-    // atan_loop!(d, nwords, SCALE*1, 239, SumOp::Decrement, SumOp::Increment, SumOp::Decrement);
-    atan_loop!(d, nwords, SCALE*8,  10, SumOp::Assign,    SumOp::Decrement, SumOp::Increment);
-    atan_loop!(d, nwords, SCALE*1, 239, SumOp::Decrement, SumOp::Increment, SumOp::Decrement);
-    atan_loop!(d, nwords, SCALE*4, 515, SumOp::Decrement, SumOp::Increment, SumOp::Decrement);
-    fixup(&mut d);
+    // atan_loop!(d, nwords, SCALE*4,   5); atan_loop!(d, nwords, SCALE*1, 239);
+    atan_loop!(d10,  nwords, SCALE*8,  10);
+    atan_loop!(d239, nwords, SCALE*1, 239);
+    atan_loop!(d515, nwords, SCALE*4, 515);
+
+    // combine sums (into d10) while fixing-up any out-of-spec digits
+    let mut r1 :Xword = 0;
+    for i in (0..d10.sum.len()).rev() {
+        let mut r0 = r1 + d10.sum[i] - d239.sum[i] - d515.sum[i];
+        r1 = 0;
+        // digits are typically close-enough to in-spec that doing
+        // a division will be more expensive than this loop pair
+        while r0 < 0     { r0+=BASE; r1-=1 }
+        while BASE <= r0 { r0-=BASE; r1+=1 }
+        d10.sum[i] = r0;
+    }
+    assert!(r1 == 0);
 
     let elapsed = start.elapsed();
-    printout(d.sum);
+    printout(d10.sum);
     println!("Computation time = {:.2?}", elapsed);
 }
