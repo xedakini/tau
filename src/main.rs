@@ -33,15 +33,12 @@ const MAXDIGITS :usize = 1200000; //base-10 digits; somewhat arbitrary limit?
 
 #[macro_use]
 extern crate static_assertions;
+const_assert!((((2*WORDDIGITS) as f64)*std::f64::consts::LOG10_2)
+            < ((std::mem::size_of::<Xword>()*8-1) as f64));
 const_assert!(MINDIGITS <= DEFDIGITS && DEFDIGITS <= MAXDIGITS);
 
-// derive "BASE" from WORDDIGITS
-const fn pow10(mut n: usize) -> Xword {
-    let mut v :Xword = 1;
-    while 0 < n { v *= 10; n -= 1 }
-    v
-}
-const BASE :Xword = pow10(WORDDIGITS); //we adjust computations to be in this base
+// derive "BASE" from WORDDIGITS; we adjust computations to be in this base
+const BASE :Xword = (10 as Xword).pow(WORDDIGITS as u32);
 
 /*
    Taylor-Maclaurin series for atan(x) (when abs(x) <= 1):
