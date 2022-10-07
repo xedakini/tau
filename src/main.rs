@@ -138,10 +138,10 @@ macro_rules! init_term {
     } }
 }
 
-fn next_denom(d: &mut Data) -> (Xword, Divider<Xword>) {
+fn next_denom(d: &mut Data) -> (Xword, Divider<Xword>, Xword, Xword) {
     d.denom += 2;
     let inv = Divider::new(d.denom).expect("libdivide initialization error");
-    (d.denom, inv)
+    (d.denom, inv, 0, 0)
 }
 
 // We write this as a macro so that the compiler sees $xxinv and $op as
@@ -176,18 +176,13 @@ macro_rules! atan_loop {
         let mut d = Data { ..Default::default() };
         init_term!(d, $nwords, $scale, $xinv);
         while d.firstnonzero < $nwords {
-            let mut remainder1 :Xword = 0;
-            let mut remainder2 :Xword = 0;
-            let mut remainder3 :Xword = 0;
-            let mut remainder4 :Xword = 0;
-            let (denom0, denom0inv) = next_denom(&mut d);
-            let (denom2, denom2inv) = next_denom(&mut d);
-
+            let (denom0, denom0inv, mut remainder0, mut remainder1) = next_denom(&mut d);
+            let (denom2, denom2inv, mut remainder2, mut remainder3) = next_denom(&mut d);
             for (term,sum) in d.term[d.firstnonzero..].iter_mut()
                           .zip(d.sum[d.firstnonzero..].iter_mut()) {
-                atan_grind!(remainder1, remainder2, term, sum, $xinv*$xinv,
+                atan_grind!(remainder0, remainder1, term, sum, $xinv*$xinv,
                             denom0, &denom0inv, SumOp::Decrement);
-                atan_grind!(remainder3, remainder4, term, sum, $xinv*$xinv,
+                atan_grind!(remainder2, remainder3, term, sum, $xinv*$xinv,
                             denom2, &denom2inv, SumOp::Increment);
             }
 
