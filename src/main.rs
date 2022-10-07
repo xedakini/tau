@@ -144,18 +144,18 @@ fn next_denom(d: &mut Data) -> (Xword, Divider<Xword>) {
     (d.denom, inv)
 }
 
-// We write this as a macro so that the compiler sees $nn and $op as
+// We write this as a macro so that the compiler sees $xxinv and $op as
 // constants.  This is an innermost-loop calculation, so optimizing
 // it is important for performance.
 macro_rules! atan_grind {
     ($r1:ident, $r2:ident, $term:ident, $sum:ident,
-     $nn:expr, $d:expr, $dinv:expr, $op:expr) => { {
+     $xxinv:expr, $d:expr, $dinv:expr, $op:expr) => { {
         // compute new term
         let v = $r1 * BASE + *$term;
         // We assume that, at least for release builds, the compiler will
-        // do libdivide-like optimization on the compile-time constant $nn
-        *$term = v / $nn;
-        $r1 = v % $nn;
+        // do libdivide-like optimization on the compile-time constant $xxinv
+        *$term = v / $xxinv;
+        $r1 = v % $xxinv;
 
         // apply newly computed term to the running sum
         let v = $r2 * BASE + *$term;
