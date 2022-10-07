@@ -36,7 +36,7 @@ const BASE :Xword = (10 as Xword).pow(WORDDIGITS as u32);
 
 #[macro_use]
 extern crate static_assertions;
-const_assert!((-1 as Xword) < 0); //Xword must be a signed type
+const_assert!((-1 as Xword) < 0 && 0 < Xword::BITS); //Xword must be a signed integer type
 const_assert!((BASE+1)*(1+2*MAXDIGITS as Xword) < Xword::MAX); //Xword must have enough bits
 const_assert!(MINDIGITS <= DEFDIGITS && DEFDIGITS <= MAXDIGITS); //sanity constraints
 
