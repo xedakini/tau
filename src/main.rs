@@ -19,26 +19,26 @@
 // --- customizable section ---
 
 // these two related declarations need to be kept in sync:
-const WORDDIGITS :usize = 9; //number of decimal digits in each computation unit
-type Xword = i64; // must be able to hold signed values up to 100**WORDDIGITS
+const WORDDIGITS :usize = 12; //number of decimal digits in each computation unit
+type Xword = i64; // must be signed and able to hold all possible intermediate values
 
 // more pedestrian modifiable values:
-const SCALE     :Xword = 8;       //we will compute SCALE*atan(1); thus 8 will compute tau
-const LINELEN   :usize = 80;      //keep output lines no longer than this length
-const MINDIGITS :usize = 18;      //base-10 digits; somewhat arbitrary constraint?
-const DEFDIGITS :usize = 288;     //the default number of base-10 digits to output
-const MAXDIGITS :usize = 1200000; //base-10 digits; somewhat arbitrary limit?
+const SCALE     :Xword = 8;         //we will compute SCALE*atan(1); thus 8 computes tau
+const LINELEN   :usize = 80;        //keep output lines no longer than this length
+const MINDIGITS :usize = 18;        //base-10 digits; somewhat arbitrary constraint?
+const DEFDIGITS :usize = 288;       //the default number of base-10 digits to output
+const MAXDIGITS :usize = 1_200_000; //base-10 digits; somewhat arbitrary limit?
 
 // --- there ought to be no moving parts left below this point ---
 
-#[macro_use]
-extern crate static_assertions;
-const_assert!((((2*WORDDIGITS) as f64)*std::f64::consts::LOG10_2)
-            < ((std::mem::size_of::<Xword>()*8-1) as f64));
-const_assert!(MINDIGITS <= DEFDIGITS && DEFDIGITS <= MAXDIGITS);
-
 // derive "BASE" from WORDDIGITS; we adjust computations to be in this base
 const BASE :Xword = (10 as Xword).pow(WORDDIGITS as u32);
+
+#[macro_use]
+extern crate static_assertions;
+const_assert!((-1 as Xword) < 0); //Xword must be a signed type
+const_assert!((BASE+1)*(1+2*MAXDIGITS as Xword) < Xword::MAX); //Xword must have enough bits
+const_assert!(MINDIGITS <= DEFDIGITS && DEFDIGITS <= MAXDIGITS); //sanity constraints
 
 /*
    Taylor-Maclaurin series for atan(x) (when abs(x) <= 1):
