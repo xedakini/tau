@@ -100,8 +100,8 @@ const_assert!(BASE*(MAXDIGITS as Xword) < Xword::MAX / 1000 * 698); //Xword big 
           = atan(136590360/17585677319)
 
         8 atan(1/10) - atan(1/239) - 4 atan(1/515)
-	      = atan(74455920/72697201) - atan(1758719/147153121)
-	      = atan(1)
+          = atan(74455920/72697201) - atan(1758719/147153121)
+          = atan(1)
           QED
 
    Putting this all together, and running calculations using multi-precision
