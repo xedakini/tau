@@ -225,8 +225,9 @@ fn get_nwords() -> usize {
         digits = DEFDIGITS;
     }
 
-    //round up to nearest number of words:
-    1 + (digits-1)/WORDDIGITS
+    //one left-of-decimal word; one word for error terms:
+    //1+ digits.div_ceil(WORDDIGITS) + 1 //error[E0658]: nightly 'int_roundings'
+    1  +    1+(digits-1)/WORDDIGITS  + 1
 }
 
 fn printout(sum: Vec<Xword>) {
@@ -249,7 +250,7 @@ fn printout(sum: Vec<Xword>) {
 }
 
 fn main() {
-    let nwords = 1 + get_nwords() + 1; // 1 left-of-decimal word; 1 error-terms word
+    let nwords = get_nwords();
     use cpu_time::ProcessTime;
     let start = ProcessTime::now();
 
