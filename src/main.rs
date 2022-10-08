@@ -182,7 +182,7 @@ macro_rules! atan_loop {
     ($nwords:expr, $scale:expr, $xinv:expr) => { {
         let mut d = Data { ..Default::default() };
         init_term!(d, $nwords, $scale, $xinv);
-        while d.firstnonzero < $nwords {
+        'outer: loop {
             let (denom0, denom0inv, mut remainder0, mut remainder1) = next_denom(&mut d);
             let (denom2, denom2inv, mut remainder2, mut remainder3) = next_denom(&mut d);
             for (term,sum) in d.term[d.firstnonzero..].iter_mut()
@@ -192,8 +192,9 @@ macro_rules! atan_loop {
                 atan_grind!(remainder2, remainder3, term, sum, $xinv*$xinv,
                             denom2, &denom2inv, SumOp::Increment);
             }
-            while d.firstnonzero < $nwords && d.term[d.firstnonzero] == 0 {
+            while d.term[d.firstnonzero] == 0 {
                 d.firstnonzero += 1;
+                if d.firstnonzero >= $nwords { break 'outer }
             }
         }
         d.sum
