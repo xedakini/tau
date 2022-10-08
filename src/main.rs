@@ -254,35 +254,22 @@ fn main() {
     use cpu_time::ProcessTime;
     let start = ProcessTime::now();
 
-    // alternative formulation: 4*atan(1/5) - atan(1/239)
-    // this formulation: 8*atan(1/10) - atan(1/239) - atan(1/515)
+    // this formulation: atan(1) = 8*atan(1/10) - atan(1/239) - 4*atan(1/515)
+    // alternative formulation: atan(1) = 4*atan(1/5) - atan(1/239)
+    let mut s = atan_loop!(nwords, SCALE*8,  10);
+    let  s239 = atan_loop!(nwords, SCALE*1, 239);
+    let  s515 = atan_loop!(nwords, SCALE*4, 515);
 
-    let s10; let s239; let s515;
-    const USE_THREADS :bool = false;
-    if USE_THREADS {
-        use std::thread;
-        let t10  = thread::spawn(move || { atan_loop!(nwords, SCALE*8,  10) } );
-        let t239 = thread::spawn(move || { atan_loop!(nwords, SCALE*1, 239) } );
-        s515 = atan_loop!(nwords, SCALE*4, 515);
-        s239 = t239.join().expect("the atan(1/239) thread panicked");
-        s10  = t10.join().expect("the atan(1/10) thread panicked");
-    } else {
-        s515 = atan_loop!(nwords, SCALE*4, 515);
-        s239 = atan_loop!(nwords, SCALE*1, 239);
-        s10  = atan_loop!(nwords, SCALE*8,  10);
-    }
-
-    let mut s = s10;
     // combine sums (into s) while fixing-up any out-of-spec digits
     let mut carry :Xword = 0;
-    for i in (0..s.len()).rev() {
-        let mut v = carry + s[i] - s239[i] - s515[i];
+    for (i, s) in s.iter_mut().enumerate().rev() {
+        let mut v = carry + *s - s239[i] - s515[i];
         carry = 0;
         // digits are typically close-enough to in-spec that doing
         // a division will be more expensive than this loop pair
         while v < 0     { v+=BASE; carry-=1 }
         while BASE <= v { v-=BASE; carry+=1 }
-        s[i] = v;
+        *s = v;
     }
     assert!(carry == 0);
 
