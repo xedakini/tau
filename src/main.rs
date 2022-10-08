@@ -27,7 +27,7 @@ const SCALE     :Xword = 8;         //we will compute SCALE*atan(1); thus 8 comp
 const LINELEN   :usize = 80;        //keep output lines no longer than this length
 const MINDIGITS :usize = 18;        //base-10 digits; somewhat arbitrary constraint?
 const DEFDIGITS :usize = 288;       //the default number of base-10 digits to output
-const MAXDIGITS :usize = 1_200_000; //base-10 digits; somewhat arbitrary limit?
+const MAXDIGITS :usize = 6_400_000; //base-10 digits; keep intermediate calcs within Xword
 
 // --- there ought to be no moving parts left below this point ---
 
@@ -37,8 +37,15 @@ const BASE :Xword = (10 as Xword).pow(WORDDIGITS as u32);
 #[macro_use]
 extern crate static_assertions;
 const_assert!((-1 as Xword) < 0 && 0 < Xword::BITS); //Xword must be a signed integer type
-const_assert!((BASE+1)*(1+2*MAXDIGITS as Xword) < Xword::MAX); //Xword must have enough bits
 const_assert!(MINDIGITS <= DEFDIGITS && DEFDIGITS <= MAXDIGITS); //sanity constraints
+
+// The following assumes that atan(1/5) is the slowest-converging
+// sub-expression to be used; also, since (5 as f64).log10() is apparently
+// not const(!?), we approximate log10(5) as 0.698; furthermore, expression
+// is written to work using only integer arithmetic.
+const_assert!(BASE*(MAXDIGITS as Xword) < Xword::MAX / 1000 * 698); //Xword big enough?
+// (BASE as f64 * MAXDIGITS as f64) < (Xword::MAX as f64) * (x as f64).log10()
+//    ... where atan(1/x) is slowest-coverging of the atan() terms that we evaluate
 
 /*
    Taylor-Maclaurin series for atan(x) (when abs(x) <= 1):
