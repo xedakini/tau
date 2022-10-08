@@ -192,9 +192,7 @@ macro_rules! atan_loop {
                 atan_grind!(remainder2, remainder3, term, sum, $xinv*$xinv,
                             denom2, &denom2inv, SumOp::Increment);
             }
-
-            let nword = d.term.len();
-            while d.firstnonzero < nword && d.term[d.firstnonzero] == 0 {
+            while d.firstnonzero < $nwords && d.term[d.firstnonzero] == 0 {
                 d.firstnonzero += 1;
             }
         }
