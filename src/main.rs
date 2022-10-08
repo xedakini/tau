@@ -25,7 +25,6 @@ type Xword = i64; // must be signed and able to hold all possible intermediate v
 // more pedestrian modifiable values:
 const SCALE     :Xword = 8;         //we will compute SCALE*atan(1); thus 8 computes tau
 const LINELEN   :usize = 80;        //keep output lines no longer than this length
-const MINDIGITS :usize = 18;        //base-10 digits; somewhat arbitrary constraint?
 const DEFDIGITS :usize = 288;       //the default number of base-10 digits to output
 const MAXDIGITS :usize = 6_400_000; //base-10 digits; keep intermediate calcs within Xword
 
@@ -37,7 +36,8 @@ const BASE :Xword = (10 as Xword).pow(WORDDIGITS as u32);
 #[macro_use]
 extern crate static_assertions;
 const_assert!((-1 as Xword) < 0 && 0 < Xword::BITS); //Xword must be a signed integer type
-const_assert!(MINDIGITS <= DEFDIGITS && DEFDIGITS <= MAXDIGITS); //sanity constraints
+const_assert!(WORDDIGITS <= DEFDIGITS && DEFDIGITS <= MAXDIGITS); //sanity constraints
+const_assert!(1 <= WORDDIGITS && WORDDIGITS < LINELEN); //more sanity constraints
 
 // The following assumes that atan(1/5) is the slowest-converging
 // sub-expression to be used; also, since (5 as f64).log10() is apparently
@@ -212,9 +212,9 @@ fn get_nwords() -> usize {
             Ok(n)  => digits = n,
             Err(e) => println!("error parsing NumberOfDigits: {}\n", e),
         }
-        if digits < MINDIGITS {
-            println!("Setting to minimum of {} digits.", MINDIGITS);
-            digits = MINDIGITS;
+        if digits < WORDDIGITS {
+            println!("Setting to minimum of {} digits.", WORDDIGITS);
+            digits = WORDDIGITS;
         } else if MAXDIGITS < digits {
             println!("Clamping to maximum of {} digits.", MAXDIGITS);
             digits = MAXDIGITS;
@@ -223,7 +223,7 @@ fn get_nwords() -> usize {
         println!("\nUsage: tau NumberOfDigits\n\n\
              NumberOfDigits must be in the range {} to {}.\n\n\
              Using a default of {} digits.",
-             MINDIGITS, MAXDIGITS, DEFDIGITS);
+             WORDDIGITS, MAXDIGITS, DEFDIGITS);
         digits = DEFDIGITS;
     }
 
