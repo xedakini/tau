@@ -114,14 +114,6 @@ const_assert!(BASE*(MAXDIGITS as Xword) < Xword::MAX / 1000 * 698); //Xword big 
 // enough: we need the compiler to see that certain "variables" are in fact
 // compile-time constants, and optimize accordingly.
 
-#[derive(Default)]
-struct Data {
-    term: Vec<Xword>,    // representation of current term-to-add
-    sum: Vec<Xword>,     // representation of running sum
-    firstnonzero: usize, // index of first non-zero word in the term Vec
-    denom: Xword,        // the denominator of the current iteration
-}
-
 enum SumOp { Increment, Decrement }
 
 // We divide a large number of values by the same divisor; on most machines,
@@ -133,22 +125,20 @@ use libdivide::Divider;
 // Written as a macro so that the compiler can observe a constant $denom.
 // (This isn't an inner loop, so perhaps this is a gratuitous optimization.)
 macro_rules! init_term {
-    ($d: ident, $nwords:expr, $numer:expr, $denom:expr) => { {
-        $d.term.truncate(0);
+    ($nwords:expr, $numer:expr, $denom:expr) => { {
         let mut r = $numer;
-        $d.term.resize_with($nwords,
+        let mut term = Vec::new();
+        term.resize_with($nwords,
                   ||{ let v = r / $denom; r = r % $denom * BASE; v });
-        $d.sum.truncate(0);
-        $d.sum.extend_from_slice($d.term.as_slice());
-        $d.firstnonzero = 0;
-        $d.denom = 1;
+        let sum = term.to_vec();
+        (term, sum, 0 as usize, 1 as Xword)
     } }
 }
 
-fn next_denom(d: &mut Data) -> (Xword, Divider<Xword>, Xword, Xword) {
-    d.denom += 2;
-    let inv = Divider::new(d.denom).expect("libdivide initialization error");
-    (d.denom, inv, 0, 0)
+fn next_denom(mut denom: Xword) -> (Xword, Divider<Xword>, Xword, Xword) {
+    denom += 2;
+    let inv = Divider::new(denom).expect("libdivide initialization error");
+    (denom, inv, 0, 0)
 }
 
 // We write this as a macro so that the compiler sees $xxinv and $op as
@@ -180,24 +170,25 @@ macro_rules! atan_grind {
 // this is just a macro so that a constant $xinv is propagated aggressively
 macro_rules! atan_loop {
     ($nwords:expr, $scale:expr, $xinv:expr) => { {
-        let mut d = Data { ..Default::default() };
-        init_term!(d, $nwords, $scale, $xinv);
+        let (mut term, mut sum, mut firstnonzero, mut denom)
+            = init_term!($nwords, $scale, $xinv);
         'outer: loop {
-            let (denom0, denom0inv, mut remainder0, mut remainder1) = next_denom(&mut d);
-            let (denom2, denom2inv, mut remainder2, mut remainder3) = next_denom(&mut d);
-            for (term,sum) in d.term[d.firstnonzero..].iter_mut()
-                          .zip(d.sum[d.firstnonzero..].iter_mut()) {
+            let (denom0, denom0inv, mut remainder0, mut remainder1) = next_denom(denom);
+            let (denom2, denom2inv, mut remainder2, mut remainder3) = next_denom(denom0);
+            denom = denom2;
+            for (term,sum) in term[firstnonzero..].iter_mut()
+                          .zip(sum[firstnonzero..].iter_mut()) {
                 atan_grind!(remainder0, remainder1, term, sum, $xinv*$xinv,
                             denom0, &denom0inv, SumOp::Decrement);
                 atan_grind!(remainder2, remainder3, term, sum, $xinv*$xinv,
                             denom2, &denom2inv, SumOp::Increment);
             }
-            while d.term[d.firstnonzero] == 0 {
-                d.firstnonzero += 1;
-                if d.firstnonzero >= $nwords { break 'outer }
+            while term[firstnonzero] == 0 {
+                firstnonzero += 1;
+                if firstnonzero >= $nwords { break 'outer }
             }
         }
-        d.sum
+        sum
     } }
 }
 
