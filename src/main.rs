@@ -18,15 +18,15 @@
 
 // --- customizable section ---
 
-// these two related declarations need to be kept in sync:
-const WORDDIGITS :usize = 12; //number of decimal digits in each computation unit
+// these three related declarations need to be kept in sync:
 type Xword = i64; // must be signed and able to hold all possible intermediate values
+const WORDDIGITS :usize = 12; //number of decimal digits in each computation unit
+const MAXDIGITS :usize = 6_400_000; //base-10 digits; keep intermediate calcs within Xword
 
 // more pedestrian modifiable values:
 const SCALE     :Xword = 8;         //we will compute SCALE*atan(1); thus 8 computes tau
 const LINELEN   :usize = 80;        //keep output lines no longer than this length
 const DEFDIGITS :usize = 288;       //the default number of base-10 digits to output
-const MAXDIGITS :usize = 6_400_000; //base-10 digits; keep intermediate calcs within Xword
 
 // --- there ought to be no moving parts left below this point ---
 
