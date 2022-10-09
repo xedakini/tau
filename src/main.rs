@@ -180,7 +180,7 @@ macro_rules! atan_loop {
 
 //-----------------------------------------------------------------
 fn get_nwords() -> usize {
-    let mut digits :usize = 0;
+    let mut digits = 0;
 
     use std::env;
     if env::args().len() == 2 {
@@ -239,7 +239,7 @@ fn main() {
     let  s515 = atan_loop!(nwords, SCALE*4, 515);
 
     // combine sums (into s) while fixing-up any out-of-spec digits
-    let mut carry :Xword = 0;
+    let mut carry = 0;
     for (i, s) in s.iter_mut().enumerate().rev() {
         let mut v = carry + *s - s239[i] - s515[i];
         carry = 0;
