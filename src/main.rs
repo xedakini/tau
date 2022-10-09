@@ -122,21 +122,19 @@ enum SumOp { Increment, Decrement }
 // divisions using bulk multiplications instead - a big performance win!
 use libdivide::Divider;
 
-// Written as a macro so that the compiler can observe a constant $denom.
+// Written as a macro so that the compiler can observe a constant $xinv.
 // (This isn't an inner loop, so perhaps this is a gratuitous optimization.)
 macro_rules! init_term {
-    ($nwords:expr, $numer:expr, $denom:expr) => { {
-        let mut r = $numer;
+    ($nwords:expr, $scale:expr, $xinv:expr) => { {
+        let mut r = $scale;
         let mut term = Vec::new();
         term.resize_with($nwords,
-                  ||{ let v = r / $denom; r = r % $denom * BASE; v });
-        let sum = term.to_vec();
-        (term, sum, 0 as usize, 1 as Xword)
+                  ||{ let v = r / $xinv; r = r % $xinv * BASE; v });
+        term
     } }
 }
 
-fn next_denom(mut denom: Xword) -> (Xword, Divider<Xword>, Xword, Xword) {
-    denom += 2;
+fn next_denom(denom: Xword) -> (Xword, Divider<Xword>, Xword, Xword) {
     let inv = Divider::new(denom).expect("libdivide initialization error");
     (denom, inv, 0, 0)
 }
@@ -170,11 +168,11 @@ macro_rules! atan_grind {
 // this is just a macro so that a constant $xinv is propagated aggressively
 macro_rules! atan_loop {
     ($nwords:expr, $scale:expr, $xinv:expr) => { {
-        let (mut term, mut sum, mut firstnonzero, mut denom)
-            = init_term!($nwords, $scale, $xinv);
+        let mut term = init_term!($nwords, $scale, $xinv);
+        let (mut sum, mut firstnonzero, mut denom) = (term.to_vec(), 0, 1);
         'outer: loop {
-            let (denom0, denom0inv, mut remainder0, mut remainder1) = next_denom(denom);
-            let (denom2, denom2inv, mut remainder2, mut remainder3) = next_denom(denom0);
+            let (denom0, denom0inv, mut remainder0, mut remainder1) = next_denom(denom+2);
+            let (denom2, denom2inv, mut remainder2, mut remainder3) = next_denom(denom0+2);
             denom = denom2;
             for (term,sum) in term[firstnonzero..].iter_mut()
                           .zip(sum[firstnonzero..].iter_mut()) {
