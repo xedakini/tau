@@ -30,11 +30,28 @@ const DEFDIGITS :usize = 288;  //the default number of base-10 digits to output
 
 // --- there ought to be no moving parts left below this point ---
 
+
+// --- import third-party crate dependencies ---
+
+// We divide a large number of values by the same divisor; on most machines,
+// division is much slower than multiplication; libdivide allows us to
+// compute a multiplicative inverse which can be used to achieve the bulk
+// divisions using bulk multiplications instead - a big performance win!
+use libdivide::Divider;
+
+// used to ensure that user-customized const settings are sane; recommended:
+#[macro_use]
+extern crate static_assertions;
+
+// only used to compute and display computation time; not essential:
+use cpu_time::ProcessTime;
+
+
+// --- some preliminary throat-clearing... ---
+
 // derive "BASE" from WORDDIGITS; we adjust computations to be in this base
 const BASE :Xword = (10 as Xword).pow(WORDDIGITS as u32);
 
-#[macro_use]
-extern crate static_assertions;
 const_assert!((-1 as Xword) < 0 && 0 < Xword::BITS); //Xword must be a signed integer type
 const_assert!(WORDDIGITS <= DEFDIGITS && DEFDIGITS <= MAXDIGITS); //sanity constraints
 const_assert!(1 <= WORDDIGITS && WORDDIGITS < LINELEN); //more sanity constraints
@@ -46,6 +63,7 @@ const_assert!(1 <= WORDDIGITS && WORDDIGITS < LINELEN); //more sanity constraint
 const_assert!(BASE*(MAXDIGITS as Xword) < Xword::MAX / 1000 * 698); //Xword big enough?
 // (BASE as f64 * MAXDIGITS as f64) < (Xword::MAX as f64) * (x as f64).log10()
 //    ... where atan(1/x) is slowest-coverging of the atan() terms that we evaluate
+
 
 /*
    Taylor-Maclaurin series for atan(x) (when abs(x) <= 1):
@@ -113,12 +131,6 @@ const_assert!(BASE*(MAXDIGITS as Xword) < Xword::MAX / 1000 * 698); //Xword big 
 // we write (most of) them as macros.  Normal in-lining isn't aggressive
 // enough: we need the compiler to see that certain "variables" are in fact
 // compile-time constants, and optimize accordingly.
-
-// We divide a large number of values by the same divisor; on most machines,
-// division is much slower than multiplication; libdivide allows us to
-// compute a multiplicative inverse which can be used to achieve the bulk
-// divisions using bulk multiplications instead - a big performance win!
-use libdivide::Divider;
 
 enum SumOp { Increment, Decrement }
 
@@ -229,7 +241,6 @@ fn printout(sum: Vec<Xword>) {
 
 fn main() {
     let nwords = get_nwords();
-    use cpu_time::ProcessTime;
     let start = ProcessTime::now();
 
     // this formulation: atan(1) = 8*atan(1/10) - atan(1/239) - 4*atan(1/515)
