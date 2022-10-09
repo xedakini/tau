@@ -134,11 +134,6 @@ macro_rules! init_term {
     } }
 }
 
-fn next_denom(denom: Xword) -> (Xword, Divider<Xword>, Xword, Xword) {
-    let inv = Divider::new(denom).expect("libdivide initialization error");
-    (denom, inv, 0, 0)
-}
-
 // We write this as a macro so that the compiler sees $xxinv and $op as
 // constants.  This is an innermost-loop calculation, so optimizing
 // it is important for performance.
@@ -170,10 +165,14 @@ macro_rules! atan_loop {
     ($nwords:expr, $scale:expr, $xinv:expr) => { {
         let mut term = init_term!($nwords, $scale, $xinv);
         let (mut sum, mut firstnonzero, mut denom) = (term.to_vec(), 0, 1);
+        let mut next_denom = || -> (Xword, Divider<Xword>, Xword, Xword) {
+            denom += 2; //captured by closure
+            let inv = Divider::new(denom).expect("libdivide initialization error");
+            (denom, inv, 0, 0)
+        };
         'outer: loop {
-            let (denom0, denom0inv, mut remainder0, mut remainder1) = next_denom(denom+2);
-            let (denom2, denom2inv, mut remainder2, mut remainder3) = next_denom(denom0+2);
-            denom = denom2;
+            let (denom0, denom0inv, mut remainder0, mut remainder1) = next_denom();
+            let (denom2, denom2inv, mut remainder2, mut remainder3) = next_denom();
             for (term,sum) in term[firstnonzero..].iter_mut()
                           .zip(sum[firstnonzero..].iter_mut()) {
                 atan_grind!(remainder0, remainder1, term, sum, $xinv*$xinv,
@@ -183,10 +182,9 @@ macro_rules! atan_loop {
             }
             while term[firstnonzero] == 0 {
                 firstnonzero += 1;
-                if firstnonzero >= $nwords { break 'outer }
+                if firstnonzero >= $nwords { break 'outer sum }
             }
         }
-        sum
     } }
 }
 
