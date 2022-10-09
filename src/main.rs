@@ -114,25 +114,13 @@ const_assert!(BASE*(MAXDIGITS as Xword) < Xword::MAX / 1000 * 698); //Xword big 
 // enough: we need the compiler to see that certain "variables" are in fact
 // compile-time constants, and optimize accordingly.
 
-enum SumOp { Increment, Decrement }
-
 // We divide a large number of values by the same divisor; on most machines,
 // division is much slower than multiplication; libdivide allows us to
 // compute a multiplicative inverse which can be used to achieve the bulk
 // divisions using bulk multiplications instead - a big performance win!
 use libdivide::Divider;
 
-// Written as a macro so that the compiler can observe a constant $xinv.
-// (This isn't an inner loop, so perhaps this is a gratuitous optimization.)
-macro_rules! init_term {
-    ($nwords:expr, $scale:expr, $xinv:expr) => { {
-        let mut r = $scale;
-        let mut term = Vec::new();
-        term.resize_with($nwords,
-                  ||{ let v = r / $xinv; r = r % $xinv * BASE; v });
-        term
-    } }
-}
+enum SumOp { Increment, Decrement }
 
 // We write this as a macro so that the compiler sees $xxinv and $op as
 // constants.  This is an innermost-loop calculation, so optimizing
@@ -163,7 +151,9 @@ macro_rules! atan_grind {
 // this is just a macro so that a constant $xinv is propagated aggressively
 macro_rules! atan_loop {
     ($nwords:expr, $scale:expr, $xinv:expr) => { {
-        let mut term = init_term!($nwords, $scale, $xinv);
+        let mut term = Vec::new();
+        let mut r = $scale;
+        term.resize_with($nwords, ||{ let v = r / $xinv; r = r % $xinv * BASE; v });
         let (mut sum, mut firstnonzero, mut denom) = (term.to_vec(), 0, 1);
         let mut next_denom = || -> (Xword, Divider<Xword>, Xword, Xword) {
             denom += 2; //captured by closure
