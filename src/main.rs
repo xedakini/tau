@@ -189,7 +189,7 @@ macro_rules! atan_loop {
 }
 
 //-----------------------------------------------------------------
-fn get_nwords() -> usize {
+fn get_nwords() -> u32 {
     let mut digits = 0;
 
     use std::env;
@@ -215,7 +215,7 @@ fn get_nwords() -> usize {
 
     //one left-of-decimal word; one word for error terms:
     //1+ digits.div_ceil(WORDDIGITS) + 1 //error[E0658]: nightly 'int_roundings'
-    (1 +    1+(digits-1)/WORDDIGITS  + 1) as usize
+    1  +    1+(digits-1)/WORDDIGITS  + 1
 }
 
 fn printout(sum: Vec<Xword>) {
@@ -238,7 +238,7 @@ fn printout(sum: Vec<Xword>) {
 }
 
 fn main() {
-    let nwords = get_nwords();
+    let nwords = get_nwords() as usize;
     let start = ProcessTime::now();
 
     // this formulation: atan(1) = 8*atan(1/10) - atan(1/239) - 4*atan(1/515)
