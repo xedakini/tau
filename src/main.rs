@@ -56,13 +56,11 @@ const_assert!((-1 as Xword) < 0 && 0 < Xword::BITS); //Xword must be a signed in
 const_assert!(WORDDIGITS <= DEFDIGITS && DEFDIGITS <= MAXDIGITS); //sanity constraints
 const_assert!(1 <= WORDDIGITS && WORDDIGITS < LINELEN); //more sanity constraints
 
-// The following assumes that atan(1/5) is the slowest-converging
-// sub-expression to be used; also, since (5 as f64).log10() is apparently
-// not const(!?), we approximate log10(5) as 0.698; furthermore, expression
-// is written to work using only integer arithmetic.
-const_assert!(BASE*(MAXDIGITS as Xword) < Xword::MAX / 1000 * 698); //Xword big enough?
-// (BASE as f64 * MAXDIGITS as f64) < (Xword::MAX as f64) * (x as f64).log10()
-//    ... where atan(1/x) is slowest-coverging of the atan() terms that we evaluate
+// The following attempts to determine if Xword is big enough for the requestd WORDDIGITS
+// and MAXDIGITS values.  It assumes that atan(1/5) is the slowest-converging sub-expression
+// to be used; then, since f32::log10(5.0) (likewise for f64::) is apparently not const(!?),
+// we approximate log10(5) as 0.698.
+const_assert!(((BASE * MAXDIGITS as Xword) as f32) <  0.698 * (Xword::MAX as f32));
 
 
 /*
@@ -128,7 +126,7 @@ const_assert!(BASE*(MAXDIGITS as Xword) < Xword::MAX / 1000 * 698); //Xword big 
 
 //-----------------------------------------------------------------
 // The routines in this section are performance-critical, to the point that
-// we write (most of) them as macros.  Normal in-lining isn't aggressive
+// we write both of them as macros.  Normal in-lining isn't aggressive
 // enough: we need the compiler to see that certain "variables" are in fact
 // compile-time constants, and optimize accordingly.
 
