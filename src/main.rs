@@ -20,13 +20,13 @@
 
 // these three related declarations need to be kept in sync:
 type Xword = i64; // must be signed and able to hold all possible intermediate values
-const WORDDIGITS :usize = 12; //number of decimal digits in each computation unit
-const MAXDIGITS  :usize = 6_400_000; //base-10 digits; keep intermediate calcs within Xword
+const WORDDIGITS :u32 = 12; //number of decimal digits in each computation unit
+const MAXDIGITS  :u32 = 6_400_000; //base-10 digits; keep intermediate calcs within Xword
 
 // more pedestrian modifiable values:
 const SCALE     :Xword = 8;    //we will compute SCALE*atan(1); thus 8 computes tau
-const LINELEN   :usize = 80;   //keep output lines no longer than this length
-const DEFDIGITS :usize = 288;  //the default number of base-10 digits to output
+const LINELEN   :u32   = 80;   //keep output lines no longer than this length
+const DEFDIGITS :u32   = 288;  //the default number of base-10 digits to output
 
 // --- there ought to be no moving parts left below this point ---
 
@@ -50,7 +50,7 @@ use cpu_time::ProcessTime;
 // --- some preliminary throat-clearing... ---
 
 // derive "BASE" from WORDDIGITS; we adjust computations to be in this base
-const BASE :Xword = (10 as Xword).pow(WORDDIGITS as u32);
+const BASE :Xword = (10 as Xword).pow(WORDDIGITS);
 
 const_assert!((-1 as Xword) < 0 && 0 < Xword::BITS); //Xword must be a signed integer type
 const_assert!(WORDDIGITS <= DEFDIGITS && DEFDIGITS <= MAXDIGITS); //sanity constraints
@@ -196,7 +196,7 @@ fn get_nwords() -> usize {
 
     use std::env;
     if env::args().len() == 2 {
-        match env::args().nth(1).expect("ndigits vanished?").parse::<usize>() {
+        match env::args().nth(1).expect("ndigits vanished?").parse() {
             Ok(n)  => digits = n,
             Err(e) => println!("error parsing NumberOfDigits: {}\n", e),
         }
@@ -217,7 +217,7 @@ fn get_nwords() -> usize {
 
     //one left-of-decimal word; one word for error terms:
     //1+ digits.div_ceil(WORDDIGITS) + 1 //error[E0658]: nightly 'int_roundings'
-    1  +    1+(digits-1)/WORDDIGITS  + 1
+    (1 +    1+(digits-1)/WORDDIGITS  + 1) as usize
 }
 
 fn printout(sum: Vec<Xword>) {
@@ -229,12 +229,12 @@ fn printout(sum: Vec<Xword>) {
     }
     print!(" = {}.", sum[0]);
 
-    const WORDS_PER_LINE :usize = LINELEN / (WORDDIGITS+1);
-    let mut c = WORDS_PER_LINE;
+    let words_per_line = LINELEN / (WORDDIGITS+1);
+    let mut c = words_per_line;
     for v in sum[1..sum.len()-1].iter() {
-        if c >= WORDS_PER_LINE { println!(""); c = 0 }
+        if c >= words_per_line { println!(""); c = 0 }
         c += 1;
-        print!(" {value:0>width$}", width=WORDDIGITS, value=v);
+        print!(" {value:0>width$}", width=(WORDDIGITS as usize), value=v);
     }
     println!("");
 }
