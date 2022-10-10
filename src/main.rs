@@ -56,10 +56,11 @@ const_assert!((-1 as Xword) < 0 && 0 < Xword::BITS); //Xword must be a signed in
 const_assert!(WORDDIGITS <= DEFDIGITS && DEFDIGITS <= MAXDIGITS); //sanity constraints
 const_assert!(1 <= WORDDIGITS && WORDDIGITS < LINELEN); //more sanity constraints
 
-// The following attempts to determine if Xword is big enough for the requestd WORDDIGITS
-// and MAXDIGITS values.  It assumes that atan(1/5) is the slowest-converging sub-expression
-// to be used; then, since f32::log10(5.0) (likewise for f64::) is apparently not const(!?),
-// we approximate log10(5) as 0.698.
+// The following attempts to determine if Xword is big enough for the
+// requested WORDDIGITS and MAXDIGITS values.  It assumes that atan(1/5) is the
+// slowest-converging sub-expression to be used; then, since f32::log10(5.0)
+// (likewise for f64::) is apparently not const(!?), we approximate log10(5)
+// as 0.698.
 const_assert!(((BASE * MAXDIGITS as Xword) as f32) <  0.698 * (Xword::MAX as f32));
 
 
