@@ -24,7 +24,7 @@ const WORDDIGITS :u32 = 12;  //number of decimal digits in each computation unit
 const MAXDIGITS  :u32 = 6_400_000; //base-10 digits; keep intermediate calcs within Xword
 
 // more pedestrian modifiable values:
-const SCALE     :Xword = 8;    //we will compute SCALE*atan(1); thus 8 computes tau
+const SCALE      :u32 = 8;   //we will compute SCALE*atan(1); thus 8 computes tau
 const LINELEN    :u32 = 80;  //keep output lines no longer than this length
 const DEFDIGITS  :u32 = 288; //the default number of base-10 digits to output
 
@@ -162,7 +162,7 @@ macro_rules! atan_grind {
 macro_rules! atan_loop {
     ($nwords:expr, $scale:expr, $xinv:expr) => { {
         let mut term = Vec::new();
-        let mut r = $scale;
+        let mut r = $scale as Xword;
         term.resize_with($nwords, ||{ let v = r / $xinv; r = r % $xinv * BASE; v });
         let (mut sum, mut firstnonzero, mut denom) = (term.to_vec(), 0, 1);
         let mut next_denom = || -> (Xword, Divider<Xword>, Xword, Xword) {
