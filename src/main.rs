@@ -70,46 +70,31 @@ const_assert!(((BASE * MAXDIGITS as Xword) as f32) <  0.698 * (Xword::MAX as f32
                = x - x^3/3 + x^5/5 - ...
 
     The heart of the calculation here uses the identity
-      tau/8 = pi/4 = atan(1) = 4*atan(1/5) - atan(1/239)
-    The Taylor-Maclaurin series for atan(1) itself converges rather slowly,
-    but each of atan(1/5) and atan(1/239) converge at a reasonable rate.
+      tau/8 = pi/4 = atan(1) = 8*atan(1/10) - atan(1/239) - 4*atan(1/515)
+    The Taylor-Maclaurin series for atan(1) itself converges rather
+    slowly, but atan(1/10) converges reasonably quickly, and atan(1/239)
+    and atan(1/515) converge quite quickly.
 
-    Demonstration that 4*atan(1/5) - atan(1/239) == atan(1):
-      Recall that:
+    Demonstration that 8*atan(1/10) - atan(1/239) - 4*atan(1/515) == atan(1):
+      Recall the sum-of-angles identity for the tangent function:
         tan(x+y) = (tan(x) + tan(y)) / (1 - tan(x)*tan(y))
       and, by the nature of inverse functions,
         x = atan(tan(x)) = tan(atan(x))
       Therefore:
         atan(x) + atan(y)
-          = atan( tan(atan(x) + atan(y)) )
+          = atan( tan( atan(x) + atan(y) ) )
           = atan( (tan(atan(x)) + tan(atan(y))) / (1 - tan(atan(x))*tan(atan(y))) )
           = atan( (x + y) / (1 - x*y) )
       And, as a special case,
-        2 atan(x) = atan(2x / (1-x^2))
+        2 atan(x) = atan(x) + atan(x) = atan((x+x) / (1-x*x)) = atan(2x / (1-x^2))
 
       Thus:
-        4 atan(1/5)
-          = 2 atan((2/5) / (1 - 1/25))
-          = 2 atan(5/12)
-          = atan((10/12) / (1 - 25/144))
-          = atan(120/119)
-      And therefore:
-        4*atan(1/5) - atan(1/239)
-          = atan(120/119) + atan(-1/239)
-          = atan((120/119 - 1/239) / (1 - 120/119 * -1/239))
-          = atan(1)
-          QED
-
-
-    Another identity is atan(1) = 8*atan(1/10) - atan(1/239) - 4*atan(1/515).
-    This has the disadvantage of requiring three passes, but has the advantage
-    that the series for 1/10 converges faster than the series for 1/5, and
-    the 1/515 series converges very rapidly.
-
-    The validity of this identity is demonstrated by:
         8 atan(1/10)
+          = 4 atan((2/10) / (1 - 1/100))
           = 4 atan(20/99)
+          = 2 atan((40/99) / (1 - 400/9801))
           = 2 atan(3960/9401)
+          = atan((7920/9401) / (1 - 15681600/88378801))
           = atan(74455920/72697201)
 
         4 atan(1/515)
@@ -117,12 +102,20 @@ const_assert!(((BASE * MAXDIGITS as Xword) as f32) <  0.698 * (Xword::MAX as f32
           = atan(136590360/17585677319)
 
         8 atan(1/10) - atan(1/239) - 4 atan(1/515)
-          = atan(74455920/72697201) - atan(1758719/147153121)
+          = atan(74455920/72697201) + (atan(-1/239) + atan(-136590360/17585677319))
+          = atan(74455920/72697201) + atan(-1758719/147153121)
           = atan(1)
           QED
 
+    (Another identity is atan(1) = 4*atan(1/5) - atan(1/239).  This has
+    the advantage of only requiring two passes, but has the disadvantage
+    that the series for 1/5 converges more slowly than those for 1/10 and
+    1/515 combined.  The proof of correctness may be obtained in a manner
+    very similar to the one shown above, and will not be spelled out here.)
+
    Putting this all together, and running calculations using multi-precision
-   arithmetic with "digit"s of base BASE is how this code accomplishes its task.
+   arithmetic with "digit"s of base BASE is how this code accomplishes
+   its task.
  */
 
 //-----------------------------------------------------------------
@@ -242,8 +235,7 @@ fn main() {
     let nwords = get_nwords() as usize;
     let start = ProcessTime::now();
 
-    // this formulation: atan(1) = 8*atan(1/10) - atan(1/239) - 4*atan(1/515)
-    // alternative formulation: atan(1) = 4*atan(1/5) - atan(1/239)
+    // atan(1) = 8*atan(1/10) - atan(1/239) - 4*atan(1/515)
     let mut s = atan_loop!(nwords, SCALE*8,  10);
     let  s239 = atan_loop!(nwords, SCALE*1, 239);
     let  s515 = atan_loop!(nwords, SCALE*4, 515);
