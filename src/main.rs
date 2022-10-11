@@ -233,7 +233,7 @@ fn printout(sum: Vec<Xword>) {
 
 fn main() {
     let nwords = get_nwords() as usize;
-    let start = ProcessTime::now();
+    let cputime = ProcessTime::now();
 
     // atan(1) = 8*atan(1/10) - atan(1/239) - 4*atan(1/515)
     let mut s = atan_loop!(nwords, SCALE*8,  10);
@@ -253,7 +253,7 @@ fn main() {
     }
     assert!(carry == 0);
 
-    let elapsed = start.elapsed();
+    let elapsed = cputime.elapsed();
     printout(s);
     println!("Computation time = {:.2?}", elapsed);
 }
