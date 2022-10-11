@@ -219,16 +219,13 @@ fn printout(sum: Vec<Xword>) {
         1 => print!("atan(1)"),
         _ => print!("{}*atan(1)", SCALE),
     }
-    print!(" = {}.", sum[0]);
+    println!(" = {}.", sum[0]);
 
-    let words_per_line = LINELEN / (WORDDIGITS+1);
-    let mut c = words_per_line;
-    for v in sum[1..sum.len()-1].iter() {
-        c += 1;
-        if c >= words_per_line { println!(""); c = 0 }
-        print!(" {value:0>width$}", width=(WORDDIGITS as usize), value=v);
+    let wdu = WORDDIGITS as usize;
+    for line in sum[1..sum.len()-1].chunks(LINELEN as usize / (wdu+1)) {
+        for v in line.iter() { print!(" {value:0>width$}", width=wdu, value=v) }
+        println!("");
     }
-    println!("");
 }
 
 fn main() {
