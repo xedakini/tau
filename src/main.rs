@@ -231,8 +231,8 @@ fn printout(sum: Vec<Xword>) {
     let words_per_line = LINELEN / (WORDDIGITS+1);
     let mut c = words_per_line;
     for v in sum[1..sum.len()-1].iter() {
-        if c >= words_per_line { println!(""); c = 0 }
         c += 1;
+        if c >= words_per_line { println!(""); c = 0 }
         print!(" {value:0>width$}", width=(WORDDIGITS as usize), value=v);
     }
     println!("");
