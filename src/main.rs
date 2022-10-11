@@ -158,12 +158,14 @@ macro_rules! atan_loop {
         let mut term = Vec::new();
         let mut r = $scale as Xword;
         term.resize_with($nwords, ||{ let v = r / $xinv; r = r % $xinv * BASE; v });
+
         let (mut sum, mut firstnonzero, mut denom) = (term.to_vec(), 0, 1);
         let mut next_denom = || -> (Xword, Divider<Xword>, Xword, Xword) {
             denom += 2; //captured by closure
             let inv = Divider::new(denom).expect("libdivide initialization error");
             (denom, inv, 0, 0)
         };
+
         'outer: loop {
             let (denom0, denom0inv, mut remainder0, mut remainder1) = next_denom();
             let (denom2, denom2inv, mut remainder2, mut remainder3) = next_denom();
@@ -174,6 +176,7 @@ macro_rules! atan_loop {
                 atan_grind!(remainder2, remainder3, term, sum, $xinv*$xinv,
                             denom2, &denom2inv, SumOp::Increment);
             }
+
             while term[firstnonzero] == 0 {
                 firstnonzero += 1;
                 if firstnonzero >= $nwords { break 'outer sum }
