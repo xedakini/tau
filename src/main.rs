@@ -210,9 +210,12 @@ fn get_nwords() -> u32 {
         digits = DEFDIGITS;
     }
 
-    //one left-of-decimal word; one word for error terms:
-    //1+ digits.div_ceil(WORDDIGITS) + 1 //error[E0658]: nightly 'int_roundings'
-    1  +    1+(digits-1)/WORDDIGITS  + 1
+    //error[E0658]: needs nightly's 'int_roundings':
+    //  digits.div_ceil(WORDDIGITS)
+    let div_ceil = |n,d| { 1 + (n-1)/d }; //roll our own :-(
+
+    let (int_word, err_word) = (1, 1);
+    int_word + div_ceil(digits, WORDDIGITS) + err_word
 }
 
 fn printout(sum: Vec<Xword>) {
