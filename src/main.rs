@@ -171,10 +171,10 @@ macro_rules! atan_loop {
             let (denom2, denom2inv, mut remainder2, mut remainder3) = next_denom();
             for (term,sum) in term[firstnonzero..].iter_mut()
                           .zip(sum[firstnonzero..].iter_mut()) {
-                atan_grind!(remainder0, remainder1, term, sum, $xinv*$xinv,
-                            denom0, &denom0inv, SumOp::Decrement);
-                atan_grind!(remainder2, remainder3, term, sum, $xinv*$xinv,
-                            denom2, &denom2inv, SumOp::Increment);
+                atan_grind!(remainder0, remainder1, term, sum,
+                            $xinv*$xinv, denom0, &denom0inv, SumOp::Decrement);
+                atan_grind!(remainder2, remainder3, term, sum,
+                            $xinv*$xinv, denom2, &denom2inv, SumOp::Increment);
             }
 
             while term[firstnonzero] == 0 {
