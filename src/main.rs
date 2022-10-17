@@ -113,6 +113,17 @@ const_assert!(((BASE * MAXDIGITS as Xword) as f32) <  0.698 * (Xword::MAX as f32
     1/515 combined.  The proof of correctness may be obtained in a manner
     very similar to the one shown above, and will not be spelled out here.)
 
+    [Note that these Taylor-series based computations are not
+    state-of-the-art for computing absurd quantities of digits of tau or
+    pi; the trillion-plus digit record holders use a hypergeometric series
+    developed by the brothers David and Gregory Chudnovsky, which cranks
+    out about 15 digits per term computed for the series.  Another approach
+    involves refinements of the Gauss-Legendre algorithm, such as one by
+    Richard Brent and Eugene Salamin (1976), which *doubles* the number
+    of accurate digits with each iteration.  But these approaches are not
+    as easy to understand or implement as Taylor-series based approaches
+    like the one used in this program.]
+
    Putting this all together, and running calculations using multi-precision
    arithmetic with "digit"s of base BASE is how this code accomplishes
    its task.
