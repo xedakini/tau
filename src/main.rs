@@ -256,14 +256,14 @@ fn main() {
 
     // combine sums (into s) while fixing-up any out-of-spec digits
     let mut carry = 0;
-    for (i, s) in s.iter_mut().enumerate().rev() {
-        let mut v = carry + *s - s239[i] - s515[i];
+    for (i, d) in s.iter_mut().enumerate().rev() {
+        let mut v = carry + *d - s239[i] - s515[i];
         carry = 0;
         // digits are typically close-enough to in-spec that doing
         // a division will be more expensive than this loop pair
         while v < 0     { v+=BASE; carry-=1 }
         while BASE <= v { v-=BASE; carry+=1 }
-        *s = v;
+        *d = v;
     }
     assert!(carry == 0);
 
