@@ -212,6 +212,8 @@ fn get_nwords() -> u32 {
         } else if MAXDIGITS < digits {
             println!("Clamping to maximum of {} digits.", MAXDIGITS);
             digits = MAXDIGITS;
+        } else {
+            //digits is in the acceptable range
         }
     } else {
         println!("\nUsage: tau NumberOfDigits\n\n\
