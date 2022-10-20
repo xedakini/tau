@@ -241,7 +241,7 @@ fn printout(sum: Vec<Xword>) {
     let wdu = WORDDIGITS as usize;
     for line in sum[1..sum.len()-1].chunks(LINELEN as usize / (wdu+1)) {
         for v in line.iter() { print!(" {value:0>width$}", width=wdu, value=v) }
-        println!("");
+        println!();
     }
 }
 
