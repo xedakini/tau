@@ -229,7 +229,7 @@ fn get_nwords() -> u32 {
     int_word + div_ceil(digits, WORDDIGITS) + err_word
 }
 
-fn printout(sum: Vec<Xword>) {
+fn printout(sum: &[Xword]) {
     match SCALE {
         8 => print!("tau"),
         4 => print!("pi"),
@@ -268,6 +268,6 @@ fn main() {
     assert!(carry == 0);
 
     let elapsed = cputime.elapsed();
-    printout(s);
+    printout(&s);
     println!("Computation time = {:.2?}", elapsed);
 }
