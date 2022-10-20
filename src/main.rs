@@ -30,7 +30,6 @@ const DEFDIGITS  :u32 = 288; //the default number of base-10 digits to output
 
 // --- there ought to be no moving parts left below this point ---
 
-
 // --- import third-party crate dependencies ---
 
 // We divide a large number of values by the same divisor; on most machines,
@@ -46,11 +45,10 @@ extern crate static_assertions;
 // only used to compute and display computation time; not essential:
 use cpu_time::ProcessTime;
 
-
 // --- some preliminary throat-clearing... ---
 
 // derive "BASE" from WORDDIGITS; we adjust computations to be in this base
-const BASE :Xword = (10 as Xword).pow(WORDDIGITS);
+const BASE: Xword = (10 as Xword).pow(WORDDIGITS);
 
 const_assert!((-1 as Xword) < 0 && 0 < Xword::BITS); //Xword must be a signed integer type
 const_assert!(WORDDIGITS <= DEFDIGITS && DEFDIGITS <= MAXDIGITS); //sanity constraints
@@ -61,73 +59,72 @@ const_assert!(1 <= WORDDIGITS && WORDDIGITS < LINELEN); //more sanity constraint
 // slowest-converging sub-expression to be used; then, since f32::log10(5.0)
 // (likewise for f64::) is apparently not const(!?), we approximate log10(5)
 // as 0.698.
-const_assert!(((BASE * MAXDIGITS as Xword) as f32) <  0.698 * (Xword::MAX as f32));
-
+const_assert!(((BASE * MAXDIGITS as Xword) as f32) < 0.698 * (Xword::MAX as f32));
 
 /*
-   Taylor-Maclaurin series for atan(x) (when abs(x) <= 1):
-       atan(x) = \sum_0^\infty (-1)^n x^{2n+1} / {2n+1}
-               = x - x^3/3 + x^5/5 - ...
+  Taylor-Maclaurin series for atan(x) (when abs(x) <= 1):
+      atan(x) = \sum_0^\infty (-1)^n x^{2n+1} / {2n+1}
+              = x - x^3/3 + x^5/5 - ...
 
-    The heart of the calculation here uses the identity
-      tau/8 = pi/4 = atan(1) = 8*atan(1/10) - atan(1/239) - 4*atan(1/515)
-    The Taylor-Maclaurin series for atan(1) itself converges rather
-    slowly, but atan(1/10) converges reasonably quickly, and atan(1/239)
-    and atan(1/515) converge quite quickly.
+   The heart of the calculation here uses the identity
+     tau/8 = pi/4 = atan(1) = 8*atan(1/10) - atan(1/239) - 4*atan(1/515)
+   The Taylor-Maclaurin series for atan(1) itself converges rather
+   slowly, but atan(1/10) converges reasonably quickly, and atan(1/239)
+   and atan(1/515) converge quite quickly.
 
-    Demonstration that 8*atan(1/10) - atan(1/239) - 4*atan(1/515) == atan(1):
-      Recall the sum-of-angles identity for the tangent function:
-        tan(x+y) = (tan(x) + tan(y)) / (1 - tan(x)*tan(y))
-      and, by the nature of inverse functions,
-        x = atan(tan(x)) = tan(atan(x))
-      Therefore:
-        atan(x) + atan(y)
-          = atan( tan( atan(x) + atan(y) ) )
-          = atan( (tan(atan(x)) + tan(atan(y))) / (1 - tan(atan(x))*tan(atan(y))) )
-          = atan( (x + y) / (1 - x*y) )
-      And, as a special case,
-        2 atan(x) = atan(x) + atan(x) = atan((x+x) / (1-x*x)) = atan(2x / (1-x^2))
+   Demonstration that 8*atan(1/10) - atan(1/239) - 4*atan(1/515) == atan(1):
+     Recall the sum-of-angles identity for the tangent function:
+       tan(x+y) = (tan(x) + tan(y)) / (1 - tan(x)*tan(y))
+     and, by the nature of inverse functions,
+       x = atan(tan(x)) = tan(atan(x))
+     Therefore:
+       atan(x) + atan(y)
+         = atan( tan( atan(x) + atan(y) ) )
+         = atan( (tan(atan(x)) + tan(atan(y))) / (1 - tan(atan(x))*tan(atan(y))) )
+         = atan( (x + y) / (1 - x*y) )
+     And, as a special case,
+       2 atan(x) = atan(x) + atan(x) = atan((x+x) / (1-x*x)) = atan(2x / (1-x^2))
 
-      Thus:
-        8 atan(1/10)
-          = 4 atan((2/10) / (1 - 1/100))
-          = 4 atan(20/99)
-          = 2 atan((40/99) / (1 - 400/9801))
-          = 2 atan(3960/9401)
-          = atan((7920/9401) / (1 - 15681600/88378801))
-          = atan(74455920/72697201)
+     Thus:
+       8 atan(1/10)
+         = 4 atan((2/10) / (1 - 1/100))
+         = 4 atan(20/99)
+         = 2 atan((40/99) / (1 - 400/9801))
+         = 2 atan(3960/9401)
+         = atan((7920/9401) / (1 - 15681600/88378801))
+         = atan(74455920/72697201)
 
-        4 atan(1/515)
-          = 2 atan(515/132612)
-          = atan(136590360/17585677319)
+       4 atan(1/515)
+         = 2 atan(515/132612)
+         = atan(136590360/17585677319)
 
-        8 atan(1/10) - atan(1/239) - 4 atan(1/515)
-          = atan(74455920/72697201) + (atan(-1/239) + atan(-136590360/17585677319))
-          = atan(74455920/72697201) + atan(-1758719/147153121)
-          = atan(1)
-          QED
+       8 atan(1/10) - atan(1/239) - 4 atan(1/515)
+         = atan(74455920/72697201) + (atan(-1/239) + atan(-136590360/17585677319))
+         = atan(74455920/72697201) + atan(-1758719/147153121)
+         = atan(1)
+         QED
 
-    (Another identity is atan(1) = 4*atan(1/5) - atan(1/239).  This has
-    the advantage of only requiring two passes, but has the disadvantage
-    that the series for 1/5 converges more slowly than those for 1/10 and
-    1/515 combined.  The proof of correctness may be obtained in a manner
-    very similar to the one shown above, and will not be spelled out here.)
+   (Another identity is atan(1) = 4*atan(1/5) - atan(1/239).  This has
+   the advantage of only requiring two passes, but has the disadvantage
+   that the series for 1/5 converges more slowly than those for 1/10 and
+   1/515 combined.  The proof of correctness may be obtained in a manner
+   very similar to the one shown above, and will not be spelled out here.)
 
-    [Note that these Taylor-series based computations are not
-    state-of-the-art for computing absurd quantities of digits of tau or
-    pi; the trillion-plus digit record holders use a hypergeometric series
-    developed by the brothers David and Gregory Chudnovsky, which cranks
-    out about 15 digits per term computed for the series.  Another approach
-    involves refinements of the Gauss-Legendre algorithm, such as one by
-    Richard Brent and Eugene Salamin (1976), which *doubles* the number
-    of accurate digits with each iteration.  But these approaches are not
-    as easy to understand or implement as Taylor-series based approaches
-    like the one used in this program.]
+   [Note that these Taylor-series based computations are not
+   state-of-the-art for computing absurd quantities of digits of tau or
+   pi; the trillion-plus digit record holders use a hypergeometric series
+   developed by the brothers David and Gregory Chudnovsky, which cranks
+   out about 15 digits per term computed for the series.  Another approach
+   involves refinements of the Gauss-Legendre algorithm, such as one by
+   Richard Brent and Eugene Salamin (1976), which *doubles* the number
+   of accurate digits with each iteration.  But these approaches are not
+   as easy to understand or implement as Taylor-series based approaches
+   like the one used in this program.]
 
-   Putting this all together, and running calculations using multi-precision
-   arithmetic with "digit"s of base BASE is how this code accomplishes
-   its task.
- */
+  Putting this all together, and running calculations using multi-precision
+  arithmetic with "digit"s of base BASE is how this code accomplishes
+  its task.
+*/
 
 //-----------------------------------------------------------------
 // The routines in this section are performance-critical, to the point that
@@ -142,7 +139,7 @@ enum SumOp { Increment, Decrement }
 // it is important for performance.
 macro_rules! atan_grind {
     ($r1:ident, $r2:ident, $term:ident, $sum:ident,
-     $xxinv:expr, $d:expr, $dinv:expr, $op:expr) => { {
+     $xxinv:expr, $d:expr, $dinv:expr, $op:expr) => {{
         // compute new term
         let v = $r1 * BASE + *$term;
         // We assume that, at least for release builds, the compiler will
@@ -160,15 +157,15 @@ macro_rules! atan_grind {
             SumOp::Increment => *$sum += q,
             SumOp::Decrement => *$sum -= q,
         }
-    } }
+    }};
 }
 
 // this is just a macro so that a constant $xinv is propagated aggressively
 macro_rules! atan_loop {
-    ($nwords:expr, $scale:expr, $xinv:expr) => { {
+    ($nwords:expr, $scale:expr, $xinv:expr) => {{
         let mut term = Vec::new();
         let mut r = $scale as Xword;
-        term.resize_with($nwords, ||{ let v = r / $xinv; r = r % $xinv * BASE; v });
+        term.resize_with($nwords, || { let v = r / $xinv; r = r % $xinv * BASE; v });
 
         let (mut sum, mut firstnonzero, mut denom) = (term.to_vec(), 0, 1);
         let mut next_denom = || -> (Xword, Divider<Xword>, Xword, Xword) {
@@ -193,7 +190,7 @@ macro_rules! atan_loop {
                 if firstnonzero >= $nwords { break 'outer sum }
             }
         }
-    } }
+    }}
 }
 
 //-----------------------------------------------------------------
@@ -216,10 +213,11 @@ fn get_nwords() -> u32 {
             //digits is in the acceptable range
         }
     } else {
-        println!("\nUsage: tau NumberOfDigits\n\n\
+        println!(
+            "\nUsage: tau NumberOfDigits\n\n\
              NumberOfDigits must be in the range {} to {}.\n\n\
              Using a default of {} digits.",
-             WORDDIGITS, MAXDIGITS, DEFDIGITS);
+            WORDDIGITS, MAXDIGITS, DEFDIGITS);
         digits = DEFDIGITS;
     }
 
