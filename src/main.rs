@@ -185,7 +185,7 @@ macro_rules! atan_loop {
 }
 
 //-----------------------------------------------------------------
-fn parse_num(s: String) -> usize {
+fn parse_num(s: &str) -> usize {
     let result = match s.parse::<usize>() {
         Ok(nn) => nn,
         Err(e) => { println!("error parsing NumberOfDigits: {}\n", e); 0 },
@@ -204,7 +204,7 @@ fn parse_num(s: String) -> usize {
 fn get_nwords() -> usize {
     let mut args = std::env::args();
     let digits = if let (Some(digit_string), None) = (args.nth(1), args.next()) {
-        parse_num(digit_string)
+        parse_num(&digit_string)
     } else {
         println!(
             "\nUsage: tau NumberOfDigits\n\n\
