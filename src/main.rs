@@ -192,13 +192,13 @@ fn parse_num(s: String) -> u32 {
     };
     if result < WORDDIGITS {
         println!("Setting to minimum of {} digits.", WORDDIGITS);
-        return WORDDIGITS;
-    }
-    if MAXDIGITS < result {
+        WORDDIGITS
+    } else if MAXDIGITS < result {
         println!("Clamping to maximum of {} digits.", MAXDIGITS);
-        return MAXDIGITS;
+        MAXDIGITS
+    } else {
+        result
     }
-    result
 }
 
 fn get_nwords() -> u32 {
