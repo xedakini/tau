@@ -30,25 +30,11 @@ const DEFDIGITS  :u32 = 288; //the default number of base-10 digits to output
 
 // --- there ought to be no moving parts left below this point ---
 
-// --- import third-party crate dependencies ---
-
-// We divide a large number of values by the same divisor; on most machines,
-// division is much slower than multiplication; libdivide allows us to
-// compute a multiplicative inverse which can be used to achieve the bulk
-// divisions using bulk multiplications instead - a big performance win!
-use libdivide::Divider;
-
-// used to ensure that user-customized const settings are sane; recommended:
-#[macro_use]
-extern crate static_assertions;
-
-// only used to compute and display computation time; not essential:
-use cpu_time::ProcessTime;
-
-// --- some preliminary throat-clearing... ---
-
 // derive "BASE" from WORDDIGITS; we adjust computations to be in this base
 const BASE: Xword = (10 as Xword).pow(WORDDIGITS);
+
+#[macro_use]
+extern crate static_assertions;
 
 const_assert!((-1 as Xword) < 0 && 0 < Xword::BITS); //Xword must be a signed integer type
 const_assert!(WORDDIGITS <= DEFDIGITS && DEFDIGITS <= MAXDIGITS); //sanity constraints
@@ -168,9 +154,14 @@ macro_rules! atan_loop {
         term.resize_with($nwords, || { let v = r / $xinv; r = r % $xinv * BASE; v });
 
         let (mut sum, mut firstnonzero, mut denom) = (term.to_vec(), 0, 1);
-        let mut next_denom = || -> (Xword, Divider<Xword>, Xword, Xword) {
+
+        // We divide a large number of values by the same divisor; on most machines,
+        // division is much slower than multiplication; libdivide allows us to
+        // compute a multiplicative inverse which can be used to achieve the bulk
+        // divisions using bulk multiplications instead - a big performance win!
+        let mut next_denom = || -> (Xword, libdivide::Divider<Xword>, Xword, Xword) {
             denom += 2; //captured by closure
-            let inv = Divider::new(denom).expect("libdivide initialization error");
+            let inv = libdivide::Divider::new(denom).expect("libdivide initialization error");
             (denom, inv, 0, 0)
         };
 
@@ -197,9 +188,8 @@ macro_rules! atan_loop {
 fn get_nwords() -> u32 {
     let mut digits = 0;
 
-    use std::env;
-    if env::args().len() == 2 {
-        match env::args().nth(1).expect("ndigits vanished?").parse() {
+    if std::env::args().len() == 2 {
+        match std::env::args().nth(1).expect("ndigits vanished?").parse() {
             Ok(n)  => digits = n,
             Err(e) => println!("error parsing NumberOfDigits: {}\n", e),
         }
@@ -247,7 +237,7 @@ fn printout(sum: &[Xword]) {
 
 fn main() {
     let nwords = get_nwords() as usize;
-    let cputime = ProcessTime::now();
+    let cputime = cpu_time::ProcessTime::now();
 
     // atan(1) = 8*atan(1/10) - atan(1/239) - 4*atan(1/515)
     let mut s = atan_loop!(nwords, SCALE*8,  10);
