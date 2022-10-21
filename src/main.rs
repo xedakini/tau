@@ -223,14 +223,16 @@ fn get_nwords() -> usize {
 }
 
 fn printout(a: &[Xword]) {
+    let (int_part, a) = a.split_first().unwrap_or((&0, &[]));
+    let (_err_part, a) = a.split_last().unwrap_or((&0, &[]));
     match SCALE {
         8 => print!("tau"),
         4 => print!("pi"),
         1 => print!("atan(1)"),
         _ => print!("{}*atan(1)", SCALE),
     }
-    println!(" = {}.", a[0]);
-    for line in a[1..a.len()-1].chunks(LINELEN / (WORDDIGITS+1)) {
+    println!(" = {}.", int_part);
+    for line in a.chunks(LINELEN / (WORDDIGITS+1)) {
         for v in line.iter() { print!(" {value:0>width$}", width=WORDDIGITS, value=v) }
         println!();
     }
