@@ -159,7 +159,7 @@ macro_rules! atan_loop {
         // division is much slower than multiplication; libdivide allows us to
         // compute a multiplicative inverse which can be used to achieve the bulk
         // divisions using bulk multiplications instead - a big performance win!
-        let mut next_denom = || -> _ {
+        let mut next_denom = || {
             denom += 2; //captured by closure
             let inv = libdivide::Divider::new(denom).expect("libdivide initialization error");
             (denom, inv, 0, 0)
@@ -216,7 +216,7 @@ fn get_nwords() -> u32 {
 
     //error[E0658]: needs nightly's 'int_roundings':
     //  digits.div_ceil(WORDDIGITS)
-    let div_ceil = |n,d| { 1 + (n-1)/d }; //roll our own :-(
+    let div_ceil = |n,d| 1 + (n-1)/d; //roll our own :-(
 
     let (int_word, err_word) = (1, 1);
     int_word + div_ceil(digits, WORDDIGITS) + err_word
