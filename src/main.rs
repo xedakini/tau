@@ -188,8 +188,8 @@ macro_rules! atan_loop {
 fn get_nwords() -> u32 {
     let mut digits = 0;
 
-    if std::env::args().len() == 2 {
-        match std::env::args().nth(1).expect("ndigits vanished?").parse() {
+    if let Some(digit_string) = std::env::args().nth(1) {
+        match digit_string.parse() {
             Ok(n)  => digits = n,
             Err(e) => println!("error parsing NumberOfDigits: {}\n", e),
         }
