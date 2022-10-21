@@ -222,18 +222,16 @@ fn get_nwords() -> usize {
     int_word + div_ceil(digits, WORDDIGITS) + err_word
 }
 
-fn printout(sum: &[Xword]) {
+fn printout(a: &[Xword]) {
     match SCALE {
         8 => print!("tau"),
         4 => print!("pi"),
         1 => print!("atan(1)"),
         _ => print!("{}*atan(1)", SCALE),
     }
-    println!(" = {}.", sum[0]);
-
-    let wdu = WORDDIGITS;
-    for line in sum[1..sum.len()-1].chunks(LINELEN / (wdu+1)) {
-        for v in line.iter() { print!(" {value:0>width$}", width=wdu, value=v) }
+    println!(" = {}.", a[0]);
+    for line in a[1..a.len()-1].chunks(LINELEN / (WORDDIGITS+1)) {
+        for v in line.iter() { print!(" {value:0>width$}", width=WORDDIGITS, value=v) }
         println!();
     }
 }
