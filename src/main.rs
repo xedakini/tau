@@ -20,18 +20,18 @@
 
 // these three related declarations need to be kept in sync:
 type Xword = i64; // must be signed and able to hold all possible intermediate values
-const WORDDIGITS :u32 = 12;  //number of decimal digits in each computation unit
-const MAXDIGITS  :u32 = 6_400_000; //base-10 digits; keep intermediate calcs within Xword
+const WORDDIGITS :usize = 12;  //number of decimal digits in each computation unit
+const MAXDIGITS  :usize = 6_400_000; //base-10 digits; intermediate calcs must fit Xword
 
 // more pedestrian modifiable values:
-const SCALE      :u32 = 8;   //we will compute SCALE*atan(1); thus 8 computes tau
-const LINELEN    :u32 = 80;  //keep output lines no longer than this length
-const DEFDIGITS  :u32 = 288; //the default number of base-10 digits to output
+const LINELEN    :usize = 80;  //keep output lines no longer than this length
+const DEFDIGITS  :usize = 288; //the default number of base-10 digits to output
+const SCALE      :Xword = 8;   //we will compute SCALE*atan(1); thus 8 computes tau
 
 // --- there ought to be no moving parts left below this point ---
 
 // derive "BASE" from WORDDIGITS; we adjust computations to be in this base
-const BASE: Xword = (10 as Xword).pow(WORDDIGITS);
+const BASE: Xword = (10 as Xword).pow(WORDDIGITS as u32);
 
 #[macro_use]
 extern crate static_assertions;
@@ -150,7 +150,7 @@ macro_rules! atan_grind {
 macro_rules! atan_loop {
     ($nwords:expr, $scale:expr, $xinv:expr) => {{
         let mut term = Vec::new();
-        let mut r = $scale as Xword;
+        let mut r = $scale;
         term.resize_with($nwords, || { let v = r / $xinv; r = r % $xinv * BASE; v });
 
         let (mut sum, mut firstnonzero, mut denom) = (term.to_vec(), 0, 1);
@@ -185,8 +185,8 @@ macro_rules! atan_loop {
 }
 
 //-----------------------------------------------------------------
-fn parse_num(s: String) -> u32 {
-    let result = match s.parse() {
+fn parse_num(s: String) -> usize {
+    let result = match s.parse::<usize>() {
         Ok(nn) => nn,
         Err(e) => { println!("error parsing NumberOfDigits: {}\n", e); 0 },
     };
@@ -201,7 +201,7 @@ fn parse_num(s: String) -> u32 {
     }
 }
 
-fn get_nwords() -> u32 {
+fn get_nwords() -> usize {
     let mut args = std::env::args();
     let digits = if let (Some(digit_string), None) = (args.nth(1), args.next()) {
         parse_num(digit_string)
@@ -231,15 +231,15 @@ fn printout(sum: &[Xword]) {
     }
     println!(" = {}.", sum[0]);
 
-    let wdu = WORDDIGITS as usize;
-    for line in sum[1..sum.len()-1].chunks(LINELEN as usize / (wdu+1)) {
+    let wdu = WORDDIGITS;
+    for line in sum[1..sum.len()-1].chunks(LINELEN / (wdu+1)) {
         for v in line.iter() { print!(" {value:0>width$}", width=wdu, value=v) }
         println!();
     }
 }
 
 fn main() {
-    let nwords = get_nwords() as usize;
+    let nwords = get_nwords();
     let cputime = cpu_time::ProcessTime::now();
 
     // atan(1) = 8*atan(1/10) - atan(1/239) - 4*atan(1/515)
