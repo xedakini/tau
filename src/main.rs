@@ -159,7 +159,7 @@ macro_rules! atan_loop {
         // division is much slower than multiplication; libdivide allows us to
         // compute a multiplicative inverse which can be used to achieve the bulk
         // divisions using bulk multiplications instead - a big performance win!
-        let mut next_denom = || -> (Xword, libdivide::Divider<Xword>, Xword, Xword) {
+        let mut next_denom = || -> _ {
             denom += 2; //captured by closure
             let inv = libdivide::Divider::new(denom).expect("libdivide initialization error");
             (denom, inv, 0, 0)
