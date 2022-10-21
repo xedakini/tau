@@ -185,31 +185,34 @@ macro_rules! atan_loop {
 }
 
 //-----------------------------------------------------------------
-fn get_nwords() -> u32 {
-    let mut digits = 0;
+fn parse_num(s: String) -> u32 {
+    let result = match s.parse() {
+        Ok(nn) => nn,
+        Err(e) => { println!("error parsing NumberOfDigits: {}\n", e); 0 },
+    };
+    if result < WORDDIGITS {
+        println!("Setting to minimum of {} digits.", WORDDIGITS);
+        return WORDDIGITS;
+    }
+    if MAXDIGITS < result {
+        println!("Clamping to maximum of {} digits.", MAXDIGITS);
+        return MAXDIGITS;
+    }
+    result
+}
 
-    if let Some(digit_string) = std::env::args().nth(1) {
-        match digit_string.parse() {
-            Ok(n)  => digits = n,
-            Err(e) => println!("error parsing NumberOfDigits: {}\n", e),
-        }
-        if digits < WORDDIGITS {
-            println!("Setting to minimum of {} digits.", WORDDIGITS);
-            digits = WORDDIGITS;
-        } else if MAXDIGITS < digits {
-            println!("Clamping to maximum of {} digits.", MAXDIGITS);
-            digits = MAXDIGITS;
-        } else {
-            //digits is in the acceptable range
-        }
+fn get_nwords() -> u32 {
+    let mut args = std::env::args();
+    let digits = if let (Some(digit_string), None) = (args.nth(1), args.next()) {
+        parse_num(digit_string)
     } else {
         println!(
             "\nUsage: tau NumberOfDigits\n\n\
              NumberOfDigits must be in the range {} to {}.\n\n\
              Using a default of {} digits.",
             WORDDIGITS, MAXDIGITS, DEFDIGITS);
-        digits = DEFDIGITS;
-    }
+        DEFDIGITS
+    };
 
     //error[E0658]: needs nightly's 'int_roundings':
     //  digits.div_ceil(WORDDIGITS)
