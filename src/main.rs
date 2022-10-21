@@ -188,13 +188,13 @@ macro_rules! atan_loop {
 fn parse_num(s: &str) -> usize {
     let result = match s.parse::<usize>() {
         Ok(nn) => nn,
-        Err(e) => { println!("error parsing NumberOfDigits: {}\n", e); 0 },
+        Err(e) => { eprintln!("error parsing NumberOfDigits: {}\n", e); 0 },
     };
     if result < WORDDIGITS {
-        println!("Setting to minimum of {} digits.", WORDDIGITS);
+        eprintln!("Setting to minimum of {} digits.", WORDDIGITS);
         WORDDIGITS
     } else if MAXDIGITS < result {
-        println!("Clamping to maximum of {} digits.", MAXDIGITS);
+        eprintln!("Clamping to maximum of {} digits.", MAXDIGITS);
         MAXDIGITS
     } else {
         result
@@ -206,7 +206,7 @@ fn get_nwords() -> usize {
     let digits = if let (Some(digit_string), None) = (args.nth(1), args.next()) {
         parse_num(&digit_string)
     } else {
-        println!(
+        eprintln!(
             "\nUsage: tau NumberOfDigits\n\n\
              NumberOfDigits must be in the range {} to {}.\n\n\
              Using a default of {} digits.",
@@ -264,5 +264,5 @@ fn main() {
 
     let elapsed = cputime.elapsed();
     printout(&s);
-    println!("Computation time = {:.2?}", elapsed);
+    eprintln!("Computation time = {:.2?}", elapsed);
 }
