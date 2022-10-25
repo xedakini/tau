@@ -31,7 +31,7 @@ const MAXDIGITS  :usize = 6_400_000; //base-10 digits; intermediate calcs must f
 
 // more pedestrian modifiable values:
 const LINELEN    :usize = 80;  //keep output lines no longer than this length
-const DEFDIGITS  :usize = 288; //the default number of base-10 digits to output
+const DEFLINES   :usize = 2;   //the number of lines to output if default digit count chosen
 const SCALE      :Xword = SCALE_TAU; //SCALE_PI is another popular choice
 
 // --- there ought to be no moving parts left below this point ---
@@ -43,8 +43,7 @@ const BASE: Xword = (10 as Xword).pow(WORDDIGITS as u32);
 extern crate static_assertions;
 
 const_assert!((-1 as Xword) < 0 && 0 < Xword::BITS); //Xword must be a signed integer type
-const_assert!(WORDDIGITS <= DEFDIGITS && DEFDIGITS <= MAXDIGITS); //sanity constraints
-const_assert!(1 <= WORDDIGITS && WORDDIGITS < LINELEN); //more sanity constraints
+const_assert!(1 <= WORDDIGITS && WORDDIGITS < LINELEN); //sanity constraints
 
 // The following attempts to determine if Xword is big enough for the
 // requested WORDDIGITS and MAXDIGITS values.  It assumes that atan(1/5) is the
@@ -212,12 +211,15 @@ fn get_nwords() -> usize {
     let digits = if let (Some(digit_string), None) = (args.nth(1), args.next()) {
         parse_num(&digit_string)
     } else {
+        let digits_per_line = LINELEN / (WORDDIGITS+1);
+        let defdigits = DEFLINES * digits_per_line * WORDDIGITS;
+        assert!(WORDDIGITS <= defdigits && defdigits <= MAXDIGITS); //sanity constraints
         eprintln!(
             "\nUsage: tau NumberOfDigits\n\n\
              NumberOfDigits must be in the range {} to {}.\n\n\
              Using a default of {} digits.",
-            WORDDIGITS, MAXDIGITS, DEFDIGITS);
-        DEFDIGITS
+            WORDDIGITS, MAXDIGITS, defdigits);
+        defdigits
     };
 
     //error[E0658]: needs nightly's 'int_roundings':
