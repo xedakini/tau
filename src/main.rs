@@ -24,10 +24,18 @@ const SCALE_PI   :Xword = 4;  // π = 4 * atan(1) = pi = τ/2
 
 // --- customizable section ---
 
-// these three related declarations need to be kept in sync:
+// These two related declarations need to be kept in sync.  Also note
+// that there is a trade-off where a large value for WORDDIGITS means
+// less computation time for a given number of output digits, but it also
+// limits the number of digits which can be calculated without causing
+// some intermediate calculation to panic due to integer overflow.
+//
+// Xword may only be one of i64 or i32 (due to the need for support from the
+// libdivide crate).  For Xword=i32, I suggest WORDDIGITS=4, as anything
+// larger excessively constrains the maximum number of digits which can
+// be computed.  For Xword=i64, I suggest WORDDIGITS=12.
 type Xword = i64; // must be signed and able to hold all possible intermediate values
 const WORDDIGITS :usize = 12;  //number of decimal digits in each computation unit
-const MAXDIGITS  :usize = 6_400_000; //base-10 digits; intermediate calcs must fit Xword
 
 // more pedestrian modifiable values:
 const LINELEN    :usize = 80;  //keep output lines no longer than this length
@@ -44,77 +52,22 @@ extern crate static_assertions;
 
 const_assert!((-1 as Xword) < 0 && 0 < Xword::BITS); //Xword must be a signed integer type
 const_assert!(1 <= WORDDIGITS && WORDDIGITS < LINELEN); //sanity constraints
-
-// The following attempts to determine if Xword is big enough for the
-// requested WORDDIGITS and MAXDIGITS values.  It assumes that atan(1/5) is the
-// slowest-converging sub-expression to be used; then, since f32::log10(5.0)
-// (likewise for f64::) is apparently not const(!?), we approximate log10(5)
-// as 0.698.
-const_assert!(((BASE * MAXDIGITS as Xword) as f32) < 0.698 * (Xword::MAX as f32));
+const_assert!(((Xword::MAX / (BASE+1)) as u64) < (usize::MAX as u64));
 
 /*
-  Taylor-Maclaurin series for atan(x) (when abs(x) <= 1):
+  First, note that: tau/8 = pi/4 = atan(1).
+
+  The Taylor-Maclaurin series for atan(x) (when abs(x) <= 1) is:
       atan(x) = \sum_0^\infty (-1)^n x^{2n+1} / {2n+1}
               = x - x^3/3 + x^5/5 - ...
 
-   The heart of the calculation here uses the identity
-     tau/8 = pi/4 = atan(1) = 8*atan(1/10) - atan(1/239) - 4*atan(1/515)
    The Taylor-Maclaurin series for atan(1) itself converges rather
-   slowly, but atan(1/10) converges reasonably quickly, and atan(1/239)
-   and atan(1/515) converge quite quickly.
+   slowly, but by using the identity
+     atan(1) = 8*atan(1/10) - atan(1/239) - 4*atan(1/515)
+   we get three readily combinable terms which each converge from
+   quickly to very-quickly.
 
-   Demonstration that 8*atan(1/10) - atan(1/239) - 4*atan(1/515) == atan(1):
-     Recall the sum-of-angles identity for the tangent function:
-       tan(x+y) = (tan(x) + tan(y)) / (1 - tan(x)*tan(y))
-     and, by the nature of inverse functions,
-       x = atan(tan(x)) = tan(atan(x))
-     Therefore:
-       atan(x) + atan(y)
-         = atan( tan( atan(x) + atan(y) ) )
-         = atan( (tan(atan(x)) + tan(atan(y))) / (1 - tan(atan(x))*tan(atan(y))) )
-         = atan( (x + y) / (1 - x*y) )
-     And, as a special case,
-       2 atan(x) = atan(x) + atan(x) = atan((x+x) / (1-x*x)) = atan(2x / (1-x^2))
-
-     Thus:
-       8 atan(1/10)
-         = 4 atan((2/10) / (1 - 1/100))
-         = 4 atan(20/99)
-         = 2 atan((40/99) / (1 - 400/9801))
-         = 2 atan(3960/9401)
-         = atan((7920/9401) / (1 - 15681600/88378801))
-         = atan(74455920/72697201)
-
-       4 atan(1/515)
-         = 2 atan(515/132612)
-         = atan(136590360/17585677319)
-
-       8 atan(1/10) - atan(1/239) - 4 atan(1/515)
-         = atan(74455920/72697201) + (atan(-1/239) + atan(-136590360/17585677319))
-         = atan(74455920/72697201) + atan(-1758719/147153121)
-         = atan(1)
-         QED
-
-   (Another identity is atan(1) = 4*atan(1/5) - atan(1/239).  This has
-   the advantage of only requiring two passes, but has the disadvantage
-   that the series for 1/5 converges more slowly than those for 1/10 and
-   1/515 combined.  The proof of correctness may be obtained in a manner
-   very similar to the one shown above, and will not be spelled out here.)
-
-   [Note that these Taylor-series based computations are not
-   state-of-the-art for computing absurd quantities of digits of tau or
-   pi; the trillion-plus digit record holders use a hypergeometric series
-   developed by the brothers David and Gregory Chudnovsky, which cranks
-   out about 15 digits per term computed for the series.  Another approach
-   involves refinements of the Gauss-Legendre algorithm, such as one by
-   Richard Brent and Eugene Salamin (1976), which *doubles* the number
-   of accurate digits with each iteration.  But these approaches are not
-   as easy to understand or implement as Taylor-series based approaches
-   like the one used in this program.]
-
-  Putting this all together, and running calculations using multi-precision
-  arithmetic with "digit"s of base BASE is how this code accomplishes
-  its task.
+   See the file "Theory.pdf" for further details.
 */
 
 //-----------------------------------------------------------------
@@ -190,17 +143,28 @@ macro_rules! atan_loop {
 }
 
 //-----------------------------------------------------------------
-fn parse_num(s: &str) -> usize {
+fn max_digits() -> usize {
+    // See the file Theory.pdf for the derivation of the relation used here.
+    // The specific expression used here that the worst-case x being
+    // computed for atan(x) is x=1/5; with the current code the worst case
+    // is in fact x=1/10, but for now at least I'll stick with the more
+    // pessimistic x=1/5.
+    // Note that 698/1000 is a truncated approximation of log10(5).
+    let d = (Xword::MAX / (BASE+1) + 1) * 698 / 1000 - 20;
+    (d - d % (WORDDIGITS as Xword)) as usize
+}
+
+fn parse_num(s: &str, maxdigits: usize) -> usize {
     let result = match s.parse::<usize>() {
         Ok(nn) => nn,
         Err(e) => { eprintln!("error parsing NumberOfDigits: {}\n", e); 0 },
     };
-    if result < WORDDIGITS {
+    if result == 0 {
         eprintln!("Setting to minimum of {} digits.", WORDDIGITS);
         WORDDIGITS
-    } else if MAXDIGITS < result {
-        eprintln!("Clamping to maximum of {} digits.", MAXDIGITS);
-        MAXDIGITS
+    } else if maxdigits < result {
+        eprintln!("Clamping to maximum of {} digits.", maxdigits);
+        maxdigits
     } else {
         result
     }
@@ -208,17 +172,18 @@ fn parse_num(s: &str) -> usize {
 
 fn get_nwords() -> usize {
     let mut args = std::env::args();
+    let maxdigits = max_digits();
     let digits = if let (Some(digit_string), None) = (args.nth(1), args.next()) {
-        parse_num(&digit_string)
+        parse_num(&digit_string, maxdigits)
     } else {
         let digits_per_line = LINELEN / (WORDDIGITS+1);
         let defdigits = DEFLINES * digits_per_line * WORDDIGITS;
-        assert!(WORDDIGITS <= defdigits && defdigits <= MAXDIGITS); //sanity constraints
+        assert!(WORDDIGITS <= defdigits && defdigits <= maxdigits); //sanity constraints
         eprintln!(
             "\nUsage: tau NumberOfDigits\n\n\
              NumberOfDigits must be in the range {} to {}.\n\n\
              Using a default of {} digits.",
-            WORDDIGITS, MAXDIGITS, defdigits);
+            WORDDIGITS, maxdigits, defdigits);
         defdigits
     };
 
@@ -226,8 +191,11 @@ fn get_nwords() -> usize {
     //  digits.div_ceil(WORDDIGITS)
     let div_ceil = |n,d| 1 + (n-1)/d; //roll our own :-(
 
-    let (int_word, err_word) = (1, 1);
-    int_word + div_ceil(digits, WORDDIGITS) + err_word
+    let (integer_portion_words, error_terms_words) = (1, 1);
+    let fraction_portion_words = div_ceil(digits, WORDDIGITS);
+    let actual_digits = fraction_portion_words * WORDDIGITS;
+    if digits != actual_digits { eprintln!("Rounding {} up to {}", digits, actual_digits) }
+    integer_portion_words + fraction_portion_words + error_terms_words
 }
 
 fn printout(a: &[Xword]) {

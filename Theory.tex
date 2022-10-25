@@ -1,0 +1,266 @@
+\documentclass{book}
+\usepackage[letterpaper,margin=35mm]{geometry}
+\usepackage{parskip}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\pagestyle{plain}
+\newcommand{\vbreak}{\vspace{4ex}}
+\newcommand{\QED}{\quad\blacksquare}
+\newcommand{\Imax}{\ensuremath{I_\text{max}}}
+\DeclareMathOperator{\atan}{atan}
+\DeclareMathOperator{\err}{err}
+\begin{document}
+\chapter*{1. Identities equivalent to $\atan(1)$}
+A demonstration that
+\begin{equation}\label{atan+10-239-515}
+  8 \atan\tfrac{1}{10} -  \atan\tfrac{1}{239} - 4 \atan\tfrac{1}{515} =  \atan 1
+\end{equation}
+
+\vspace{3ex}
+First, recall the sum-of-angles identity for the tangent function:
+\begin{equation}
+  \tan(x+y) = \frac{\tan x + \tan y}{1 - (\tan x)(\tan y)}
+\end{equation}
+Furthermore, by the nature of inverse functions,
+\begin{equation}
+  x = \atan(\tan x) = \tan(\atan x)
+\end{equation}
+Therefore:
+\begin{equation}
+  \begin{aligned}
+     \atan x + \atan y
+       &= \atan( \tan( \atan x + \atan y ) ) \\
+       &= \atan \frac{\tan(\atan x) + \tan(\atan y)}{1 - \tan(\atan x) \tan(\atan y)} \\
+       &= \atan \frac{x + y}{1 - x y}
+  \end{aligned}
+\end{equation}
+And, as a special case,
+\begin{equation}
+  \begin{aligned}
+    2 \atan x &= \atan x + \atan x\\
+              &= \atan \frac{2x}{1-x^2}
+  \end{aligned}
+\end{equation}
+
+\vbreak
+Thus:
+  \begin{align*}
+    &8 \atan \tfrac{1}{10}  \\
+       &\quad= 4 \atan \tfrac{2/10}{1 - 1/100}
+	 \quad= 4 \atan \tfrac{20}{99} \\
+       &\quad= 2 \atan \tfrac{40/99}{1 - 400/9801}
+	 \quad= 2 \atan \tfrac{3960}{9401} \\
+       &\quad= \atan \tfrac{7920/9401}{1 - 15681600/88378801}
+	 \quad=   \atan \tfrac{74455920}{72697201}
+  \end{align*}
+And
+  \begin{align*}
+    &4 \atan \tfrac{1}{515} \\
+      &\quad= 2 \atan \tfrac{515}{132612} \\
+      &\quad= \atan \tfrac{136590360}{17585677319}
+  \end{align*}
+So
+  \begin{align*}
+    &8 \atan\tfrac{1}{10} - \atan\tfrac{1}{239} - 4 \atan\tfrac{1}{515} \\
+      &\quad= \atan\tfrac{74455920}{72697201} - (\atan\tfrac{1}{239} + \atan\tfrac{136590360}{17585677319}) \\
+      &\quad= \atan\tfrac{74455920}{72697201} + \atan\tfrac{-1758719}{147153121} \\
+      &\quad= \atan 1
+      \QED
+  \end{align*}
+
+\vbreak
+Another identity that could be used is:
+\begin{equation}\label{atan+5-239}
+   \atan 1 = 4 \atan\tfrac{1}{5} - \atan\tfrac{1}{239}
+\end{equation}
+This has the advantage of only requiring two passes, but has the
+disadvantage that the series for $\frac{1}{5}$ converges more slowly
+than those for $\frac{1}{10}$ and $\frac{1}{515}$ combined.
+The proof of correctness may be obtained in a manner very similar
+to the one shown above, and will not be spelled out here.
+
+[Note that these Taylor-series based computations are not
+state-of-the-art for computing absurd quantities of digits of tau or
+pi; the trillion-plus digit record holders use a hypergeometric series
+developed by the brothers David and Gregory Chudnovsky, which cranks
+out about 15 digits per term computed for the series.  Another approach
+involves refinements of the Gauss-Legendre algorithm, such as one by
+Richard Brent and Eugene Salamin (1976), which \emph{doubles} the number
+of accurate digits with each iteration.  But these approaches are not
+as easy to understand or implement as Taylor-series based approaches
+like the one used in this program.]
+
+Putting this all together, and running calculations using multi-precision
+arithmetic with ``digit''s of base \texttt{BASE} is how this code accomplishes
+its task.
+
+\chapter*{2. Error Analysis}
+Let
+\begin{equation}\label{function-f}
+  f(x, n) = \frac{x^{2n+1}}{2n+1} \quad  [1 \le \tfrac{1}{x}; \text{ i.e., } 0 \le x \le 1]
+\end{equation}
+Then the Taylor-Maclaurin series for $\atan x$
+can then be written as:
+\begin{equation}
+  \atan x = \sum_{i=0}^{\infty} \,(-1)^i\, f(x, i)
+\end{equation}
+
+Recall that if $a_i$ is a monotonically non-increasing sequence
+with $\lim_{i\to\infty} a_i = 0$,
+then the sum $\sum_{i=0}^\infty (-1)^i\, a_i$
+converges; truncating this sum
+after term $n$ will have an error whose magnitude
+is at most $a_{n+1}$.
+%((** double-check that all criteria are named and met **)
+Thus for $\atan x$, provided that $1 \le \frac{1}{x}$,
+the error incurred by truncating the series after the $n$-th term is:
+\begin{equation}\label{partial-f-a-n}
+  \err(n)
+    \le f(x,n+1) = \frac{x^{2 n+3}}{2 n+3}
+    <   \frac{x^{2 n+1}}{2 n+1} = f(x,n)
+\end{equation}
+
+We will assume that $a=1/x$ is the worst-case choice for the relations being
+considered. Substituting into \eqref{partial-f-a-n} gives
+\begin{equation}\label{constraint-1}
+  \err(n) < f(\tfrac{1}{a},n)
+\end{equation}
+
+\vbreak
+We want our error term $\err(n)$ to be less than $B^{-D}$,
+for some specified base $B$ and to-be-determined base-$B$-digit-count $D$:
+\begin{equation}\label{target}
+  \err(n) < B^{-D}
+\end{equation}
+
+Furthermore, we want to fit intermediate results into an integer which
+cannot exceed some maximum \Imax.
+Each word of our multi-precision vector is
+modulo-reduced by $2 n+1$ on outer-loop iteration $n$.
+Each step computes
+\[ r_i B + t_i \le \Imax \]
+at word-index $i$,
+for carry-down residue $r_i$ and previous-term $t_i$,
+each of which is in the range $0 \le \star \le 2 n+1-1 = 2 n$,
+thus the worst-case intermediate result is
+\( 2\, n B + 2\, n \le \Imax \).
+Solving for n yields:
+\begin{equation}\label{n-terms}
+  n \le \frac{\Imax}{2\,(B+1)}
+\end{equation}
+
+\vbreak
+Our goal is to find the largest $D$ that simultaneously satisfies
+relations \eqref{constraint-1}, \eqref{target}, and \eqref{n-terms}.
+It is acceptable to find a value $D'$ that is less than the actual maximum,
+if an approximation makes life easier,
+but we must never allow the resultant $D'$ to be bigger than $D$
+and we prefer not to underestimate $D$ by \emph{too} much.
+
+Now equations \eqref{constraint-1} and \eqref{target}
+do not have a natural ordering,
+but given our goal of wanting to derive a ``safe'' value of $D$,
+we choose to combine them with this ordering:
+\begin{equation}\label{target-inequality}
+  \err(n) < f(\tfrac{1}{a},n) < B^{-D}
+\end{equation}
+For brevity, let
+\begin{equation}\label{R-def}
+  R = \frac{\Imax}{B+1}
+\end{equation}
+Combining substitutions of
+\eqref{n-terms} and \eqref{R-def}
+into equation~\eqref{target-inequality}
+gives:
+  \[ f(\tfrac{1}{a}, \tfrac{R}{2}) < B^{-D} \]
+Solving for $D$ yields:
+\begin{equation}
+  D < \frac{ -\log f(\tfrac{1}{a}, \tfrac{R}{2}) }{ \log B }
+\end{equation}
+Using $(\tfrac{1}{a})^x = a^{-x}$,
+$\log x/\log B = \log_B x$,
+and the definition of $f$ given in equation~\eqref{function-f}:
+\begin{equation}
+	D
+	< \frac{ -\log \frac{a^{-(2(R/2)+1)}}{2(R/2)+1} }{ \log B}
+	= (R+1) \log_B a - \log_B (R+1)
+\end{equation}
+Converting the digit count to base-10 digits involves multiplying
+by $\log_{10} B$.
+Since $(\log_B x)(\log_{10} B) = \frac{\log_B x}{\log_B 10} = \log_{10} x$,
+we can determine that the constraint on the number of decimal digits $d$ as
+\begin{equation}\label{d-constraint}
+  d = D \log_{10} B < (R+1) \log_{10} a - \log_{10}(R+1)
+\end{equation}
+
+\vbreak
+To take a concrete example, let us assume that our worst-case is $a=5$
+(as when evaluating the relation in equation~\eqref{atan+5-239}),
+that $B=10^{12}$, and that $\Imax=2^{63}-1$,
+then $R = \frac{2^{63}-1}{10^{12}+1}$
+and we get
+  \[ d
+     < \left(\tfrac{2^{63}-1}{10^{12}+1} + 1\right) \log_{10} 5 - \log_{10} \left(\tfrac{2^{63}-1}{10^{12}+1} + 1\right)
+     \approx 6\,446\,844
+  \]
+So, for these parameters we want to ensure that no more than
+$6\,446\,844$ decimal digits are allowed to be computed and printed,
+to avoid the risk of errors from integer overflow
+(whether they are silent as in C or panicking as in Rust).
+
+\vbreak
+Some further adjustments:
+\begin{itemize}
+  \item To re-iterate, we don't need to be precise in our upper bound;
+    lowering by a few digits is acceptable.
+  \item Hence it is okay to increase the $\log_{10}(R+1)$ term
+    in equation~\eqref{d-constraint} by a little bit,
+    as this would lower the bound on $d$ by a little bit.
+    The largest $\Imax$ supported by the code
+    (due to its use of libdivide, which only supports 32- and 64- bit
+    integers)
+    is $2^{63}-1$,
+    and $\log_{10} 2^{63} < 20$, so we can safely
+    substitute 20 for this term, regardless of what
+    the actual $\Imax$ and $B$ used might be.
+  \item We are assuming that our worst case is $a=5$, so $\log_{10} a > 0.698$.
+  \item To minimize user confusion, we want to round the ``maximum''
+    down to the nearest multiple of $\log_{10} B$, since we will always
+    be outputting an integer number of base-$B$ ``digits''.
+\end{itemize}
+All of this can be accomplished with integer-only calculations
+by using the following Rust function
+(where
+\texttt{Xword} is the signed-integer type used for calculations,
+\texttt{Xword::MAX} represents $\Imax$,
+$\texttt{WORDDIGITS} = \log_{10} B$ (which is required to be an integer,
+thus we end up with $\texttt{BASE} = B$ below)):
+\begin{verbatim}
+     const BASE: Xword = (10 as Xword).pow(WORDDIGITS as u32);
+     fn max_digits() -> Xword {
+       let d = (Xword::MAX / (BASE+1) + 1) * 698 / 1000 - 20;
+       d - d % (WORDDIGITS as Xword)
+     }
+\end{verbatim}
+
+Note that if we use $a=10$
+(like if we use
+equation~\eqref{atan+10-239-515})
+instead of $a=5$ (as with equation~\eqref{atan+5-239}),
+then instead of using $\log_{10}5 \approx 698/1000$
+we would use $\log_{10} 10 = 1$,
+which both simplifies the equation and allows for the safe
+computation of more digits.
+On the other hand, an attempt to compute $\atan(1)$ directly
+using the Taylor series would involve multiplying by
+$\log_{10} 1 = 0$ --- thus we would not be assured of
+being able to accurately compute \emph{any} digits
+of the result before encountering integer overflow
+in some intermediate calculation;
+this is one of the reasons we seek and use a mathematically
+equivalent calculation which is more numerically stable
+(the other reason is that even if we had infinite-precision
+variables, the rate of convergence for a raw $\atan(1)$
+is much too slow).
+
+\end{document}
