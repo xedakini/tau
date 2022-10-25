@@ -16,6 +16,12 @@
    --kpp 2022-10-04
 */
 
+// name a couple of constants that might be helpful in the next section
+#[allow(dead_code)]
+const SCALE_TAU  :Xword = 8;  // τ = 8 * atan(1) = tau = 2π
+#[allow(dead_code)]
+const SCALE_PI   :Xword = 4;  // π = 4 * atan(1) = pi = τ/2
+
 // --- customizable section ---
 
 // these three related declarations need to be kept in sync:
@@ -26,7 +32,7 @@ const MAXDIGITS  :usize = 6_400_000; //base-10 digits; intermediate calcs must f
 // more pedestrian modifiable values:
 const LINELEN    :usize = 80;  //keep output lines no longer than this length
 const DEFDIGITS  :usize = 288; //the default number of base-10 digits to output
-const SCALE      :Xword = 8;   //we will compute SCALE*atan(1); thus 8 computes tau
+const SCALE      :Xword = SCALE_TAU; //SCALE_PI is another popular choice
 
 // --- there ought to be no moving parts left below this point ---
 
