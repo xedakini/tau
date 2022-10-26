@@ -197,15 +197,18 @@ and the definition of $f$ given in equation~\eqref{function-f}:
 \begin{equation}
 	D
 	< \frac{ -\log \frac{a^{-(2(R/2)+1)}}{2(R/2)+1} }{ \log B}
-	= (R+1) \log_B a - \log_B (R+1)
+	= (R+1) \log_B a + \log_B (R+1)
 \end{equation}
 Converting the digit count to base-10 digits
 involves multiplying by $\log_{10} B$.
 Because
-  \[ (\log_B x)(\log_{10} B) = \frac{\log_B x}{\log_B 10} = \log_{10} x \]
+  \[ (\log_B x)(\log_{10} B)
+     = \frac{\log_{10} x}{\log_{10} B} \log_{10} B
+     = \log_{10} x
+  \]
 we can determine that the constraint on the number of decimal digits $d$ as
 \begin{equation}\label{d-constraint}
-  d = D \log_{10} B < (R+1) \log_{10} a - \log_{10}(R+1)
+  d = D \log_{10} B < (R+1) \log_{10} a + \log_{10}(R+1)
 \end{equation}
 
 \vbreak
@@ -217,11 +220,11 @@ and that $\Imax=2^{63}-1$;
 then $R = \frac{2^{63}-1}{10^{12}+1}$
 and we get
   \[ d
-     < \left(\tfrac{2^{63}-1}{10^{12}+1} + 1\right) \log_{10} 5 - \log_{10} \left(\tfrac{2^{63}-1}{10^{12}+1} + 1\right)
-     \approx 6\,446\,844
+     < \left(\tfrac{2^{63}-1}{10^{12}+1} + 1\right) \log_{10} 5 + \log_{10} \left(\tfrac{2^{63}-1}{10^{12}+1} + 1\right)
+     \approx 6\,446\,868
   \]
 So for these parameters we want to ensure that no more than
-$6\,446\,844$ decimal digits are allowed to be computed and printed,
+$6\,446\,868$ decimal digits are allowed to be computed and printed,
 in order to avoid the risk of errors from integer overflow
 (whether they are silent as in C or panicking as in Rust).
 
@@ -230,16 +233,13 @@ Some further adjustments:
 \begin{itemize}
   \item To re-iterate, we don't need to be precise in our upper bound;
     lowering by a few digits is acceptable.
-  \item Hence it is okay to increase the $\log_{10}(R+1)$ term
-    in equation~\eqref{d-constraint} by a little bit,
-    as this would lower the bound on $d$ by a little bit.
-    The largest $\Imax$ supported by the code
-    (due to its use of libdivide,
-    which only supports 32- and 64- bit integers)
-    is $2^{63}-1$,
-    and $\log_{10} 2^{63} < 20$,
-    so we can safely substitute 20 for this term,
-    regardless of what the actual $\Imax$ and $B$ used might be.
+  \item Hence it is okay to drop the $\log_{10}(R+1)$ term
+    in equation~\eqref{d-constraint};
+    even in the situation with
+    $\Imax = 2^{64}$ and $B=10$,
+    which will give a fairly large $R=\Imax/(B+1)$,
+    we would lose fewer than 20 digits
+    in our estimation of $d$.
   \item We are assuming that our worst case is $a=5$,
     so $\log_{10} a > 0.698$.
   \item To minimize user confusion, we want to round the ``maximum''
@@ -258,14 +258,14 @@ hence that we end up with $\texttt{BASE} = B$ below:
 \begin{verbatim}
      const BASE: Xword = (10 as Xword).pow(WORDDIGITS as u32);
      fn max_digits() -> Xword {
-       let d = (Xword::MAX / (BASE+1) + 1) * 698 / 1000 - 20;
+       let d = (Xword::MAX / (BASE+1) + 1) * 698 / 1000;
        d - d % (WORDDIGITS as Xword)
      }
 \end{verbatim}
 
 \vextra
 Note that if we use $a=10$
-(like if we use equation~\eqref{atan+10-239-515})
+(such as when using equation~\eqref{atan+10-239-515})
 instead of $a=5$
 (as with equation~\eqref{atan+5-239}),
 then instead of using $\log_{10}5 \approx 698/1000$
@@ -275,9 +275,9 @@ computation of more digits.
 On the other hand, an attempt to compute $\atan(1)$ directly
 using the Taylor series would involve multiplying by
 $\log_{10} 1 = 0$ --- thus we would
-not be assured of being able
-to accurately compute \emph{any} digits
-of the result before encountering integer overflow
+be limited to the fairly small
+quantity of $\log_{10}(R+1)$ digits
+before encountering integer overflow problems
 in some intermediate calculation;
 this is one of the reasons we seek and use a mathematically
 equivalent calculation which is more numerically stable
