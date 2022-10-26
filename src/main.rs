@@ -150,7 +150,7 @@ fn max_digits() -> usize {
     // is in fact x=1/10, but for now at least I'll stick with the more
     // pessimistic x=1/5.
     // Note that 698/1000 is a truncated approximation of log10(5).
-    let d = (Xword::MAX / (BASE+1) + 1) * 698 / 1000 - 20;
+    let d = (Xword::MAX / (BASE+1) + 1) * 698 / 1000;
     (d - d % (WORDDIGITS as Xword)) as usize
 }
 
