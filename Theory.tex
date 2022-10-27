@@ -247,8 +247,9 @@ Some further adjustments:
     which will give a fairly large $R=\Imax/(B+1)$,
     we would lose fewer than 20 digits
     in our estimation of $d$.
-  \item We are assuming that our worst case is $a=5$,
-    so $\log_{10} a > 0.698$.
+  \item We are assuming that our worst case happens with $a=5$;
+    $\log_{10}(5) > 339/485$
+    with an error in the ballpark of one part per million.
   \item To minimize user confusion, we want to round the ``maximum''
     down to the nearest multiple of $\log_{10} B$,
     since we will always be outputting
@@ -265,7 +266,7 @@ hence that we end up with $\texttt{BASE} = B$ below:
 \begin{verbatim}
      const BASE: Xword = (10 as Xword).pow(WORDDIGITS as u32);
      fn max_digits() -> Xword {
-       let d = (Xword::MAX / (BASE+1) + 1) * 698 / 1000;
+       let d = (Xword::MAX / (BASE+1) + 1) * 339 / 485;
        d - d % (WORDDIGITS as Xword)
      }
 \end{verbatim}
@@ -275,7 +276,7 @@ Note that if we use $a=10$
 (such as when using equation~\eqref{atan+10-239-515})
 instead of $a=5$
 (as with equation~\eqref{atan+5-239}),
-then instead of using $\log_{10}5 \approx 698/1000$
+then instead of using $\log_{10}5 \approx 339/485$
 we would use $\log_{10} 10 = 1$,
 which both simplifies the equation and allows for the safe
 computation of more digits.
@@ -283,7 +284,8 @@ On the other hand, an attempt to compute $\atan(1)$ directly
 using the Taylor series would involve multiplying by
 $\log_{10} 1 = 0$ --- thus we would
 be limited to the fairly small
-quantity of $\log_{10}(R+1)$ digits
+quantity of $\log_{10}(R+1)$
+digits accurately computed
 before encountering integer overflow problems
 in some intermediate calculation;
 this is one of the reasons we seek and use a mathematically

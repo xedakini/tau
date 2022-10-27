@@ -149,8 +149,8 @@ fn max_digits() -> usize {
     // computed for atan(x) is x=1/5; with the current code the worst case
     // is in fact x=1/10, but for now at least I'll stick with the more
     // pessimistic x=1/5.
-    // Note that 698/1000 is a truncated approximation of log10(5).
-    let d = (Xword::MAX / (BASE+1) + 1) * 698 / 1000;
+    // Note that 339/485 is a truncated approximation of log10(5).
+    let d = (Xword::MAX / (BASE+1) + 1) * 339 / 485;
     (d - d % (WORDDIGITS as Xword)) as usize
 }
 
