@@ -3,9 +3,16 @@
 \usepackage{parskip}
 \usepackage{amsmath}
 \usepackage{amssymb}
-\usepackage{titlesec}\titlelabel{\thetitle.\quad}
 
-\titleformat{\chapter}[hang]{\normalfont \Huge \sffamily}{\thechapter. }{0 pt}{\Huge}
+%re-format "\chapter{}" to my liking
+\makeatletter
+\def\@makechapterhead#1{{\vspace*{-2\baselineskip}
+  \parindent \z@ \raggedright \normalfont
+  \ifnum \c@secnumdepth >\m@ne {\huge\bfseries\thechapter.} \fi
+  \interlinepenalty\@M \Huge \sffamily #1\par\nobreak \vskip 40\p@
+}}
+\makeatother
+
 \pagestyle{plain}
 \newcommand{\vbreak}{\vspace{4ex}}
 \newcommand{\vextra}{\vspace{2ex}}
