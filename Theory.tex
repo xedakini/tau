@@ -3,6 +3,7 @@
 \usepackage{parskip}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{xfrac}
 
 %re-format "\chapter{}" to my liking
 \makeatletter
@@ -59,11 +60,11 @@ Thus:
 \begin{equation}
   \begin{aligned}
     &8 \atan \tfrac{1}{10}  \\
-       &\quad= 4 \atan \tfrac{2/10}{1 - 1/100}
+       &\quad= 4 \atan \frac{\sfrac{2}{10}}{1 - \sfrac{1}{100}}
 	 \quad= 4 \atan \tfrac{20}{99} \\
-       &\quad= 2 \atan \tfrac{40/99}{1 - 400/9801}
+       &\quad= 2 \atan \frac{\sfrac{40}{99}}{1 - \sfrac{400}{9801}}
 	 \quad= 2 \atan \tfrac{3960}{9401} \\
-       &\quad= \atan \tfrac{7920/9401}{1 - 15681600/88378801}
+       &\quad= \atan \frac{\sfrac{7920}{9401}}{1 - \sfrac{15681600}{88378801}}
 	 \quad=   \atan \tfrac{74455920}{72697201}
   \end{aligned}
 \end{equation}
@@ -91,8 +92,8 @@ Another identity that could be used is:
 \end{equation}
 This has the advantage of only requiring two passes,
 but has the disadvantage that
-the series for $\frac{1}{5}$ converges more slowly
-than those for $\frac{1}{10}$ and $\frac{1}{515}$ combined.
+the series for $\sfrac{1}{5}$ converges more slowly
+than those for $\sfrac{1}{10}$ and $\sfrac{1}{515}$ combined.
 The proof of correctness may be obtained in a manner very similar
 to the one shown above,
 and will not be spelled out here.
@@ -143,7 +144,7 @@ We will assume that $a=1/x$ is the worst-case choice
 for the relations being considered.
 Substituting into \eqref{partial-f-a-n} gives
 \begin{equation}\label{constraint-1}
-  \err(n) < f(\tfrac{1}{a},n)
+  \err(n) < f(\sfrac{1}{a},n)
 \end{equation}
 
 \vbreak
@@ -185,7 +186,7 @@ do not have a natural ordering,
 but given our goal of wanting to derive a ``safe'' value of $D$,
 we choose to combine them with this ordering:
 \begin{equation}\label{target-inequality}
-  \err(n) < f(\tfrac{1}{a},n) < B^{-D}
+  \err(n) < f(\sfrac{1}{a},n) < B^{-D}
 \end{equation}
 For brevity, let
 \begin{equation}\label{R-def}
@@ -193,17 +194,17 @@ For brevity, let
 \end{equation}
 Combining substitutions of \eqref{n-terms} and \eqref{R-def}
 into equation~\eqref{target-inequality} gives:
-  \[ f(\tfrac{1}{a}, \tfrac{R}{2}) < B^{-D} \]
+  \[ f(\sfrac{1}{a}, \sfrac{R}{2}) < B^{-D} \]
 Solving for $D$ yields:
 \begin{equation}
-  D < \frac{ -\log f(\tfrac{1}{a}, \tfrac{R}{2}) }{ \log B }
+  D < \frac{ -\log f(\sfrac{1}{a}, \sfrac{R}{2}) }{ \log B }
 \end{equation}
-Using $(\tfrac{1}{a})^x = a^{-x}$,
-$\log x/\log B = \log_B x$,
+Using $(\sfrac{1}{a})^x = a^{-x}$,
+$\sfrac{\log x}{\log B} = \log_B x$,
 and the definition of $f$ given in equation~\eqref{function-f}:
 \begin{equation}
 	D
-	< \frac{ -\log \frac{a^{-(2(R/2)+1)}}{2(R/2)+1} }{ \log B}
+	< \frac{ -\log \frac{a^{-(2(\sfrac{R}{2})+1)}}{2(\sfrac{R}{2})+1} }{ \log B}
 	= (R+1) \log_B a + \log_B (R+1)
 \end{equation}
 Converting the digit count to base-10 digits
@@ -224,7 +225,7 @@ let us assume that our worst-case is $a=5$
 (as when evaluating the relation in equation~\eqref{atan+5-239}),
 that $B=10^{12}$,
 and that $\Imax=2^{63}-1$;
-then $R = \frac{2^{63}-1}{10^{12}+1}$
+then $R = \tfrac{2^{63}-1}{10^{12}+1}$
 and we get
   \[ d
      < \left(\tfrac{2^{63}-1}{10^{12}+1} + 1\right) \log_{10} 5 + \log_{10} \left(\tfrac{2^{63}-1}{10^{12}+1} + 1\right)
@@ -244,11 +245,11 @@ Some further adjustments:
     in equation~\eqref{d-constraint};
     even in the situation with
     $\Imax = 2^{64}$ and $B=10$,
-    which will give a fairly large $R=\Imax/(B+1)$,
+    which will give a fairly large $R=\tfrac{\Imax}{B+1}$,
     we would lose fewer than 20 digits
     in our estimation of $d$.
   \item We are assuming that our worst case happens with $a=5$;
-    $\log_{10}(5) > 339/485$
+    $\log_{10}(5) > \sfrac{339}{485}$
     with an error in the ballpark of one part per million.
   \item To minimize user confusion, we want to round the ``maximum''
     down to the nearest multiple of $\log_{10} B$,
@@ -276,7 +277,7 @@ Note that if we use $a=10$
 (such as when using equation~\eqref{atan+10-239-515})
 instead of $a=5$
 (as with equation~\eqref{atan+5-239}),
-then instead of using $\log_{10}5 \approx 339/485$
+then instead of using $\log_{10}5 \approx \sfrac{339}{485}$
 we would use $\log_{10} 10 = 1$,
 which both simplifies the equation and allows for the safe
 computation of more digits.
