@@ -59,13 +59,13 @@ And, as a special case,
 Thus:
 \begin{equation}
   \begin{aligned}
-    &8 \atan \tfrac{1}{10}  \\
+    & 8 \atan \tfrac{1}{10}  \\
        &\quad= 4 \atan \frac{\sfrac{2}{10}}{1 - \sfrac{1}{100}}
-	 \quad= 4 \atan \tfrac{20}{99} \\
+         \quad= 4 \atan \tfrac{20}{99} \\
        &\quad= 2 \atan \frac{\sfrac{40}{99}}{1 - \sfrac{400}{9801}}
-	 \quad= 2 \atan \tfrac{3960}{9401} \\
+         \quad= 2 \atan \tfrac{3960}{9401} \\
        &\quad= \atan \frac{\sfrac{7920}{9401}}{1 - \sfrac{15681600}{88378801}}
-	 \quad=   \atan \tfrac{74455920}{72697201}
+         \quad=   \atan \tfrac{74455920}{72697201}
   \end{aligned}
 \end{equation}
 And
@@ -78,7 +78,7 @@ And
 \end{equation}
 So
   \begin{align*}
-    &8 \atan\tfrac{1}{10} - \atan\tfrac{1}{239} - 4 \atan\tfrac{1}{515} \\
+    & 8 \atan\tfrac{1}{10} - \atan\tfrac{1}{239} - 4 \atan\tfrac{1}{515} \\
       &\quad= \atan\tfrac{74455920}{72697201} - (\atan\tfrac{1}{239} + \atan\tfrac{136590360}{17585677319}) \\
       &\quad= \atan\tfrac{74455920}{72697201} + \atan\tfrac{-1758719}{147153121} \\
       &\quad= \atan 1
@@ -118,7 +118,7 @@ is how this code accomplishes its task.
 Let
 \begin{equation}\label{function-f}
   f(x, n) = \frac{x^{2n+1}}{2n+1}
-	    \quad  [|x| \le 1]
+            \quad  [|x| \le 1]
 \end{equation}
 Then the Taylor-Maclaurin series for $\atan x$ (over $|x| \le 1$)
 can be written as:
@@ -205,9 +205,9 @@ Using $(\sfrac{1}{a})^x = a^{-x}$,
 $\sfrac{\log x}{\log B} = \log_B x$,
 and the definition of $f$ given in equation~\eqref{function-f}:
 \begin{equation}
-	D
-	< \frac{ -\log \frac{a^{-(2(\sfrac{R}{2})+1)}}{2(\sfrac{R}{2})+1} }{ \log B}
-	= (R+1) \log_B a + \log_B (R+1)
+        D
+        < \frac{ -\log \frac{a^{-(2(\sfrac{R}{2})+1)}}{2(\sfrac{R}{2})+1} }{ \log B}
+        = (R+1) \log_B a + \log_B (R+1)
 \end{equation}
 Converting the digit count to base-10 digits
 involves multiplying by $\log_{10} B$.
