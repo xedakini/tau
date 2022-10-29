@@ -31,13 +31,13 @@ A demonstration that
 
 \vextra
 First, recall the sum-of-angles identity for the tangent function:
-\begin{equation}
+\begin{equation*}
   \tan(x+y) = \frac{\tan x + \tan y}{1 - (\tan x)(\tan y)}
-\end{equation}
+\end{equation*}
 Furthermore, by the nature of inverse functions,
-\begin{equation}
+\begin{equation*}
   x = \atan(\tan x) = \tan(\atan x)
-\end{equation}
+\end{equation*}
 Therefore:
 \begin{equation}
   \begin{aligned}
@@ -57,7 +57,7 @@ And, as a special case,
 
 \vbreak
 Thus:
-\begin{equation}
+\begin{equation*}
   \begin{aligned}
     & 8 \atan \tfrac{1}{10}  \\
        &\quad= 4 \atan \frac{\sfrac{2}{10}}{1 - \sfrac{1}{100}}
@@ -67,15 +67,15 @@ Thus:
        &\quad= \atan \frac{\sfrac{7920}{9401}}{1 - \sfrac{15681600}{88378801}}
          \quad=   \atan \tfrac{74455920}{72697201}
   \end{aligned}
-\end{equation}
+\end{equation*}
 And
-\begin{equation}
+\begin{equation*}
   \begin{aligned}
     &4 \atan \tfrac{1}{515} \\
       &\quad= 2 \atan \tfrac{515}{132612} \\
       &\quad= \atan \tfrac{136590360}{17585677319}
   \end{aligned}
-\end{equation}
+\end{equation*}
 So
   \begin{align*}
     & 8 \atan\tfrac{1}{10} - \atan\tfrac{1}{239} - 4 \atan\tfrac{1}{515} \\
@@ -122,9 +122,9 @@ Let
 \end{equation}
 Then the Taylor-Maclaurin series for $\atan x$ (over $|x| \le 1$)
 can be written as:
-\begin{equation}
+\begin{equation*}
   \atan x = \sum_{i=0}^{\infty} \,(-1)^i\, f(x, i)
-\end{equation}
+\end{equation*}
 
 Recall that if $a_i$ is a monotonically non-increasing sequence
 with $\lim_{i\to\infty} a_i = 0$,
@@ -202,9 +202,9 @@ into equation~\eqref{target-inequality} gives:
   f(\sfrac{1}{a}, \sfrac{R}{2}) < B^{-D}
 \end{equation*}
 Solving for $D$ yields:
-\begin{equation}
+\begin{equation*}
   D < \frac{ -\log f(\sfrac{1}{a}, \sfrac{R}{2}) }{ \log B }
-\end{equation}
+\end{equation*}
 Using $(\sfrac{1}{a})^x = a^{-x}$,
 $\sfrac{\log x}{\log B} = \log_B x$,
 and the definition of $f$ given in equation~\eqref{function-f}:
