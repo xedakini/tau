@@ -162,7 +162,9 @@ into an integer which cannot exceed some maximum \Imax.
 Each word of our multi-precision vector is
 modulo-reduced by $2 n+1$ on outer-loop iteration $n$.
 Each step computes
-\[ r_i B + t_i \le \Imax \]
+\begin{equation*}
+  r_i B + t_i \le \Imax
+\end{equation*}
 at word-index $i$,
 for carry-down residue $r_i$ and previous-term $t_i$,
 each of which is in the range $0 \le \star \le 2 n+1-1 = 2 n$,
@@ -196,7 +198,9 @@ For brevity, let
 \end{equation}
 Combining substitutions of \eqref{n-terms} and \eqref{R-def}
 into equation~\eqref{target-inequality} gives:
-  \[ f(\sfrac{1}{a}, \sfrac{R}{2}) < B^{-D} \]
+\begin{equation*}
+  f(\sfrac{1}{a}, \sfrac{R}{2}) < B^{-D}
+\end{equation*}
 Solving for $D$ yields:
 \begin{equation}
   D < \frac{ -\log f(\sfrac{1}{a}, \sfrac{R}{2}) }{ \log B }
@@ -205,17 +209,18 @@ Using $(\sfrac{1}{a})^x = a^{-x}$,
 $\sfrac{\log x}{\log B} = \log_B x$,
 and the definition of $f$ given in equation~\eqref{function-f}:
 \begin{equation}
-        D
-        < \frac{ -\log \frac{a^{-(2(\sfrac{R}{2})+1)}}{2(\sfrac{R}{2})+1} }{ \log B}
-        = (R+1) \log_B a + \log_B (R+1)
+  D
+  < \frac{ -\log \frac{a^{-(2(\sfrac{R}{2})+1)}}{2(\sfrac{R}{2})+1} }{ \log B}
+  = (R+1) \log_B a + \log_B (R+1)
 \end{equation}
 Converting the digit count to base-10 digits
 involves multiplying by $\log_{10} B$.
 Because
-  \[ (\log_B x)(\log_{10} B)
-     = \frac{\log_{10} x}{\log_{10} B} \log_{10} B
-     = \log_{10} x
-  \]
+\begin{equation*}
+  (\log_B x)(\log_{10} B)
+  = \frac{\log_{10} x}{\log_{10} B} \log_{10} B
+  = \log_{10} x
+\end{equation*}
 we can determine that the constraint on the number of decimal digits $d$ as
 \begin{equation}\label{d-constraint}
   d = D \log_{10} B < (R+1) \log_{10} a + \log_{10}(R+1)
@@ -229,10 +234,11 @@ that $B=10^{12}$,
 and that $\Imax=2^{63}-1$;
 then $R = \tfrac{2^{63}-1}{10^{12}+1}$
 and we get
-  \[ d
-     < \left(\tfrac{2^{63}-1}{10^{12}+1} + 1\right) \log_{10} 5 + \log_{10} \left(\tfrac{2^{63}-1}{10^{12}+1} + 1\right)
-     \approx 6\,446\,868
-  \]
+\begin{equation*}
+  d
+  < \left(\tfrac{2^{63}-1}{10^{12}+1} + 1\right) \log_{10} 5 + \log_{10} \left(\tfrac{2^{63}-1}{10^{12}+1} + 1\right)
+  \approx 6\,446\,868
+\end{equation*}
 So for these parameters we want to ensure that no more than
 $6\,446\,868$ decimal digits are allowed to be computed and printed,
 in order to avoid the risk of errors from integer overflow
