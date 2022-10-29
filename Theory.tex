@@ -42,7 +42,7 @@ Therefore:
 \begin{equation}
   \begin{aligned}
      \atan x + \atan y
-       &= \atan( \tan( \atan x + \atan y ) ) \\
+       &= \atan\left( \tan( \atan x + \atan y ) \right) \\
        &= \atan \frac{\tan(\atan x) + \tan(\atan y)}{1 - \tan(\atan x) \tan(\atan y)} \\
        &= \atan \frac{x + y}{1 - x y}
   \end{aligned}
@@ -118,9 +118,9 @@ is how this code accomplishes its task.
 Let
 \begin{equation}\label{function-f}
   f(x, n) = \frac{x^{2n+1}}{2n+1}
-            \quad  [1 \le \tfrac{1}{x}; \text{ i.e., } 0 \le x \le 1]
+	    \quad  [|x| \le 1]
 \end{equation}
-Then the Taylor-Maclaurin series for $\atan x$
+Then the Taylor-Maclaurin series for $\atan x$ (over $|x| \le 1$)
 can be written as:
 \begin{equation}
   \atan x = \sum_{i=0}^{\infty} \,(-1)^i\, f(x, i)
@@ -132,7 +132,7 @@ then the sum $\sum_{i=0}^\infty (-1)^i\, a_i$ converges;
 truncating this sum after term $n$
 will have an error whose magnitude is at most $a_{n+1}$.
 %((** double-check that all criteria are named and met **)
-Thus for $\atan x$, provided that $1 \le \frac{1}{x}$,
+Thus for $\atan x$, provided that $0 \le x \le 1$,
 the error incurred by truncating the series after the $n$-th term is:
 \begin{equation}\label{partial-f-a-n}
   \err(n)
@@ -140,7 +140,9 @@ the error incurred by truncating the series after the $n$-th term is:
     <   \frac{x^{2 n+1}}{2 n+1} = f(x,n)
 \end{equation}
 
-We will assume that $a=1/x$ is the worst-case choice
+We will restrict ourselves to consideration of positive $x$
+(i.e., $0 < x \le 1$, or $1 \le \sfrac{1}{x}$)
+and assume that $a=\sfrac{1}{x}$ is the worst-case choice
 for the relations being considered.
 Substituting into \eqref{partial-f-a-n} gives
 \begin{equation}\label{constraint-1}
