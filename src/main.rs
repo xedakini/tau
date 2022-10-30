@@ -47,9 +47,7 @@ const SCALE      :Xword = SCALE_TAU; //SCALE_PI is another popular choice
 // derive "BASE" from WORDDIGITS; we adjust computations to be in this base
 const BASE: Xword = (10 as Xword).pow(WORDDIGITS as u32);
 
-#[macro_use]
-extern crate static_assertions;
-
+use static_assertions::const_assert;
 const_assert!((-1 as Xword) < 0 && 0 < Xword::BITS); //Xword must be a signed integer type
 const_assert!(1 <= WORDDIGITS && WORDDIGITS < LINELEN); //sanity constraints
 const_assert!(((Xword::MAX / (BASE+1)) as u64) < (usize::MAX as u64));
