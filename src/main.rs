@@ -38,9 +38,9 @@ type Xword = i64; // must be signed and able to hold all possible intermediate v
 const WORDDIGITS :usize = 12;  //number of decimal digits in each computation unit
 
 // more pedestrian modifiable values:
-const LINELEN    :usize = 80;  //keep output lines no longer than this length
+const LINELEN    :usize = 80;  //keep output lines no longer than this length (default value)
 const DEFLINES   :usize = 2;   //the number of lines to output if default digit count chosen
-const SCALE      :Xword = SCALE_TAU; //SCALE_PI is another popular choice
+const DEFSCALE   :Xword = SCALE_TAU; //SCALE_PI is another popular choice
 
 // --- there ought to be no moving parts left below this point ---
 
@@ -152,43 +152,51 @@ fn max_digits() -> usize {
     (d - d % (WORDDIGITS as Xword)) as usize
 }
 
-fn parse_num(s: &str, maxdigits: usize) -> usize {
-    let result = match s.parse::<usize>() {
-        Ok(nn) => nn,
-        Err(e) => { eprintln!("error parsing NumberOfDigits: {}\n", e); 0 },
-    };
-    if result == 0 {
-        eprintln!("Setting to minimum of {} digits.", WORDDIGITS);
-        WORDDIGITS
-    } else if maxdigits < result {
-        eprintln!("Clamping to maximum of {} digits.", maxdigits);
-        maxdigits
+fn get_scale(arg: Option<String>) -> Xword {
+    if let Some(s) = arg {
+        match s.as_str() {
+            "tau"|"τ" => SCALE_TAU,
+            "pi" |"π" => SCALE_PI,
+            _ =>
+                match s.parse::<Xword>() {
+                    Err(e) => {
+                        eprintln!("error parsing scale: {}\n", e);
+                        std::process::exit(1);
+                    },
+                    Ok(scale) => scale,
+                },
+        }
     } else {
-        result
+        DEFSCALE
     }
 }
 
-fn get_nwords() -> usize {
-    let mut args = std::env::args();
-    let maxdigits = max_digits();
-    let digits = if let (Some(digit_string), None) = (args.nth(1), args.next()) {
-        parse_num(&digit_string, maxdigits)
+fn get_nwords(digit_opt: Option<usize>, digit_param: Option<usize>,
+              linelen: usize, maxdigits: usize) -> usize {
+    let mut digits;
+    if let Some(n) = digit_param {
+        digits = n;
+    } else if let Some(n) = digit_opt {
+        digits = n;
     } else {
-        let digits_per_line = LINELEN / (WORDDIGITS+1);
-        let defdigits = DEFLINES * digits_per_line * WORDDIGITS;
-        assert!(WORDDIGITS <= defdigits && defdigits <= maxdigits); //sanity constraints
-        eprintln!(
-            "\nUsage: tau NumberOfDigits\n\n\
-             NumberOfDigits must be in the range {} to {}.\n\n\
-             Using a default of {} digits.",
-            WORDDIGITS, maxdigits, defdigits);
-        defdigits
-    };
+        let digits_per_line = linelen / (WORDDIGITS+1);
+        digits = digits_per_line * DEFLINES * WORDDIGITS;
+        assert!(WORDDIGITS <= digits && digits <= maxdigits); //sanity check
+        eprintln!("Using a default of {} digits.", digits);
+    }
+    if digits == 0 {
+        eprintln!("Setting to minimum of {} digits.", WORDDIGITS);
+        digits = WORDDIGITS;
+    } else if maxdigits < digits {
+        eprintln!("Clamping to maximum of {} digits.", maxdigits);
+        digits = maxdigits;
+    }
 
     //error[E0658]: needs nightly's 'int_roundings':
     //  digits.div_ceil(WORDDIGITS)
-    let div_ceil = |n,d| 1 + (n-1)/d; //roll our own :-(
+    let div_ceil = |n,d| { assert!(0 < n); 1 + (n-1)/d }; //roll our own :-(
 
+    // convert requested number of digits to the number of Xwords we need to allocate
     let (integer_portion_words, error_terms_words) = (1, 1);
     let fraction_portion_words = div_ceil(digits, WORDDIGITS);
     let actual_digits = fraction_portion_words * WORDDIGITS;
@@ -196,30 +204,53 @@ fn get_nwords() -> usize {
     integer_portion_words + fraction_portion_words + error_terms_words
 }
 
-fn printout(a: &[Xword]) {
+fn parse_cmdline() -> (usize, usize, Xword) {
+    let (args, rest) = rustop::opts! {
+        synopsis "Compute τ (tau) to specified number of digits";
+        opt digits:Option<usize>, desc:"the number of digits to compute";
+        opt linelen:usize=LINELEN, desc:"the (maximum) length of an output line";
+        opt scale:Option<String>,
+              desc:"compute scale*atan(1); can use 'tau', 'pi', or an integer";
+        param ndigits:Option<usize>, desc:"the number of digits to compute (overrides -d)";
+    }.parse_or_exit();
+
+    let maxdigits = max_digits();
+    if ! rest.is_empty() {
+        eprintln!(
+            "\nUsage: tau [options] [NumberOfDigits]\n\n\
+             NumberOfDigits must be in the range {} to {}.\n\
+             Use \"--help\" for more options.",
+            WORDDIGITS, maxdigits);
+        std::process::exit(1);
+    }
+    let nwords = get_nwords(args.digits, args.ndigits, args.linelen, maxdigits);
+    ( nwords, args.linelen, get_scale(args.scale) )
+}
+
+fn printout(a: &[Xword], scale: Xword, linelen: usize) {
     let (int_part, a) = a.split_first().unwrap_or((&0, &[]));
     let (_err_part, a) = a.split_last().unwrap_or((&0, &[]));
-    match SCALE {
-        8 => print!("tau"),
-        4 => print!("pi"),
+    match scale {
+        8 => print!("τ"),
+        4 => print!("π"),
         1 => print!("atan(1)"),
-        _ => print!("{}*atan(1)", SCALE),
+        _ => print!("{}*atan(1)", scale),
     }
     println!(" = {}.", int_part);
-    for line in a.chunks(LINELEN / (WORDDIGITS+1)) {
+    for line in a.chunks(linelen / (WORDDIGITS+1)) {
         for v in line.iter() { print!(" {value:0>width$}", width=WORDDIGITS, value=v) }
         println!();
     }
 }
 
 fn main() {
-    let nwords = get_nwords();
+    let (nwords, linelen, scale) = parse_cmdline();
     let cputime = cpu_time::ProcessTime::now();
 
     // atan(1) = 8*atan(1/10) - atan(1/239) - 4*atan(1/515)
-    let mut s = atan_loop!(nwords, SCALE*8,  10);
-    let  s239 = atan_loop!(nwords, SCALE*1, 239);
-    let  s515 = atan_loop!(nwords, SCALE*4, 515);
+    let mut s = atan_loop!(nwords, scale*8,  10);
+    let  s239 = atan_loop!(nwords, scale*1, 239);
+    let  s515 = atan_loop!(nwords, scale*4, 515);
 
     // combine sums (into s) while fixing-up any out-of-spec digits
     let mut carry = 0;
@@ -239,6 +270,6 @@ fn main() {
     assert!(carry == 0);
 
     let elapsed = cputime.elapsed();
-    printout(&s);
+    printout(&s, scale, linelen);
     eprintln!("Computation time = {:.2?}", elapsed);
 }

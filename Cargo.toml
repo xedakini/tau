@@ -8,5 +8,6 @@ edition = "2021"
 
 [dependencies]
 libdivide = "0.4.0"
+rustop = "1.1.2"
 static_assertions = "1.1.0"
 cpu-time = "1.0.0"
