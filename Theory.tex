@@ -169,7 +169,7 @@ Each step computes
 \end{equation*}
 at word-index $i$,
 for carry-down residue $r_i$ and previous-term $t_i$,
-each of which is in the range $0 \le \star \le 2 n+1-1 = 2 n$,
+each of which is in the range $0 \le \star \le (2 n+1) - 1 = 2 n$,
 thus the worst-case intermediate result is
 \( 2\, n B + 2\, n \le \Imax \).
 Solving for n yields:
@@ -194,7 +194,7 @@ we choose to combine them with this ordering:
 \begin{equation}\label{target-inequality}
   \err(n) < f(\sfrac{1}{a},n) < B^{-D}
 \end{equation}
-For brevity, let
+For brevity in the sequel, let
 \begin{equation}\label{R-def}
   R = \frac{\Imax}{B+1}
 \end{equation}
