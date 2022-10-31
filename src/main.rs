@@ -111,12 +111,12 @@ macro_rules! atan_loop {
 
         let (mut sum, mut firstnonzero, mut denom) = (term.to_vec(), 0, 1);
 
-        // We divide a large number of values by the same divisor; on most machines,
-        // division is much slower than multiplication; libdivide allows us to
-        // compute a multiplicative inverse which can be used to achieve the bulk
-        // divisions using bulk multiplications instead - a big performance win!
+        // We divide a potentially long vector of values by the same divisor; on most
+        // machines, division is much slower than multiplication; libdivide allows us
+        // to compute a multiplicative inverse which can be used to achieve the bulk
+        // divisions using bulk multiplications instead — a big performance win!
         let mut next_denom = || {
-            denom += 2; //captured by closure
+            denom += 2;
             let inv = libdivide::Divider::new(denom).expect("libdivide initialization error");
             (denom, inv, 0, 0)
         };
