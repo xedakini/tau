@@ -37,8 +37,8 @@ const SCALE_PI   :Xword = 4;  // π = 4 * atan(1) = pi = τ/2
 type Xword = i64; // must be signed and able to hold all possible intermediate values
 const WORDDIGITS :usize = 12;  //number of decimal digits in each computation unit
 
-// more pedestrian modifiable values:
-const LINELEN    :usize = 80;  //keep output lines no longer than this length (default value)
+// define some default values:
+const DEFLINELEN :usize = 80;  //keep output lines no longer than this length
 const DEFLINES   :usize = 2;   //the number of lines to output if default digit count chosen
 const DEFSCALE   :Xword = SCALE_TAU; //SCALE_PI is another popular choice
 
@@ -49,7 +49,7 @@ const BASE: Xword = (10 as Xword).pow(WORDDIGITS as u32);
 
 use static_assertions::const_assert;
 const_assert!((-1 as Xword) < 0 && 0 < Xword::BITS); //Xword must be a signed integer type
-const_assert!(1 <= WORDDIGITS && WORDDIGITS < LINELEN); //sanity constraints
+const_assert!(1 <= WORDDIGITS && WORDDIGITS < DEFLINELEN); //sanity constraints
 const_assert!(((Xword::MAX / (BASE+1)) as u64) < (usize::MAX as u64));
 
 /*
@@ -208,7 +208,7 @@ fn parse_cmdline() -> (usize, usize, Xword) {
     let (args, rest) = rustop::opts! {
         synopsis "Compute τ (tau) to specified number of digits";
         opt digits:Option<usize>, desc:"the number of digits to compute";
-        opt linelen:usize=LINELEN, desc:"the (maximum) length of an output line";
+        opt linelen:usize=DEFLINELEN, desc:"the (maximum) length of an output line";
         opt scale:Option<String>,
               desc:"compute scale*atan(1); can use 'tau', 'pi', or an integer";
         param ndigits:Option<usize>, desc:"the number of digits to compute (overrides -d)";
@@ -221,6 +221,10 @@ fn parse_cmdline() -> (usize, usize, Xword) {
              NumberOfDigits must be in the range {} to {}.\n\
              Use \"--help\" for more options.",
             WORDDIGITS, maxdigits);
+        std::process::exit(1);
+    }
+    if args.linelen <= WORDDIGITS {
+        eprintln!("--linelen must be at least {}", WORDDIGITS+1);
         std::process::exit(1);
     }
     let nwords = get_nwords(args.digits, args.ndigits, args.linelen, maxdigits);
