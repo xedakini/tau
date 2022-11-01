@@ -144,10 +144,12 @@ macro_rules! atan_loop {
 // validate! is similar to std::assert!, except that it calls
 // std::process::exit(1) instead of panic!-ing
 macro_rules! validate {
-    () => {};
-    ($cond:expr, $($tail:tt)*) => {{
+    ($cond:expr) => {{
+        if ! $cond { std::process::exit(1) }
+    }};
+    ($cond:expr, $($message:tt)*) => {{
         if ! $cond {
-            eprintln!($($tail)*);
+            eprintln!($($message)*);
             std::process::exit(1);
         }
     }};
