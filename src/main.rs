@@ -251,7 +251,12 @@ fn printout(a: &[Xword], scale: Xword, linelen: usize) {
     }
 }
 
+//nightly has a 'unix_sigpipe' feature (tracking #97889),
+//which can replace our use of the sigpipe crate:
+//#![feature(unix_sigpipe)]
+//#[unix_sigpipe = "sig_dfl"]
 fn main() -> Result<()> {
+    sigpipe::reset();
     let (nwords, linelen, scale) = parse_cmdline()?;
     let cputime = cpu_time::ProcessTime::now();
 
