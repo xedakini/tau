@@ -180,6 +180,7 @@ fn get_nwords(digit_opt: Option<usize>, digit_param: Option<usize>,
         } else if let Some(n) = digit_opt {
             n
         } else {
+            if linelen == 0 { return 42 } //whatever
             let digits_per_line = linelen / (WORDDIGITS+1);
             let n = digits_per_line * DEFLINES * WORDDIGITS;
             assert!(WORDDIGITS <= n && n <= maxdigits); //sanity check
@@ -228,7 +229,7 @@ fn parse_cmdline() -> (usize, usize, Xword) {
             WORDDIGITS, maxdigits);
         std::process::exit(1);
     }
-    if args.linelen <= WORDDIGITS {
+    if args.linelen <= WORDDIGITS  && args.linelen != 0 {
         eprintln!("--linelen must be at least {}", WORDDIGITS+1);
         std::process::exit(1);
     }
@@ -245,7 +246,8 @@ fn printout(a: &[Xword], scale: Xword, linelen: usize) {
         1 => print!("atan(1)"),
         _ => print!("{}*atan(1)", scale),
     }
-    println!(" = {}.", int_part);
+    print!(" = {}.", int_part);
+    let linelen = if linelen == 0 { usize::MAX } else { println!(); linelen };
     for line in a.chunks(linelen / (WORDDIGITS+1)) {
         for v in line.iter() { print!(" {value:0>width$}", width=WORDDIGITS, value=v) }
         println!();
