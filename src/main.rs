@@ -170,7 +170,7 @@ fn get_scale(arg: Option<String>) -> Xword {
         "pi"  | "π" => SCALE_PI,
         _ => match s.parse::<Xword>() {
             Err(e) => {
-                eprintln!("error parsing --scale argument: {}", e);
+                eprintln!("error parsing --scale argument: {e}");
                 std::process::exit(1);
             },
             Ok(scale) => {
@@ -193,15 +193,15 @@ fn get_nwords(digit_opt: Option<usize>, digit_param: Option<usize>,
             let digits_per_line = linelen / (WORDDIGITS+1);
             let n = digits_per_line * DEFLINES * WORDDIGITS;
             assert!(WORDDIGITS <= n && n <= maxdigits); //sanity check
-            eprintln!("Using a default of {} digits.", n);
+            eprintln!("Using a default of {n} digits.");
             n
         };
     let digits =
         if digits == 0 {
-            eprintln!("Setting to minimum of {} digits.", WORDDIGITS);
+            eprintln!("Setting to minimum of {WORDDIGITS} digits.");
             WORDDIGITS
         } else if maxdigits < digits {
-            eprintln!("Clamping to maximum of {} digits.", maxdigits);
+            eprintln!("Clamping to maximum of {maxdigits} digits.");
             maxdigits
         } else {
             digits
@@ -215,7 +215,7 @@ fn get_nwords(digit_opt: Option<usize>, digit_param: Option<usize>,
     let (integer_portion_words, error_terms_words) = (1, 1);
     let fraction_portion_words = div_ceil(digits, WORDDIGITS);
     let actual_digits = fraction_portion_words * WORDDIGITS;
-    if digits != actual_digits { eprintln!("Rounding {} up to {}", digits, actual_digits) }
+    if digits != actual_digits { eprintln!("Rounding {digits} up to {actual_digits}") }
     integer_portion_words + fraction_portion_words + error_terms_words
 }
 
@@ -232,9 +232,8 @@ fn parse_cmdline() -> (usize, usize, Xword) {
     let maxdigits = max_digits();
     validate!(rest.is_empty(),
             "\nUsage: tau [options] [NumberOfDigits]\n\n\
-             NumberOfDigits must be in the range {} to {}.\n\
-             Use \"--help\" for more options.",
-            WORDDIGITS, maxdigits);
+             NumberOfDigits must be in the range {WORDDIGITS} to {maxdigits}.\n\
+             Use \"--help\" for more options.");
     validate!(args.linelen==0 || args.linelen>WORDDIGITS,
               "--linelen must be at least {}", WORDDIGITS+1);
     let nwords = get_nwords(args.digits, args.ndigits, args.linelen, maxdigits);
@@ -248,12 +247,12 @@ fn printout(a: &[Xword], scale: Xword, linelen: usize) {
         8 => print!("τ"),
         4 => print!("π"),
         1 => print!("atan(1)"),
-        _ => print!("{}*atan(1)", scale),
+        _ => print!("{scale}*atan(1)"),
     }
-    print!(" = {}.", int_part);
+    print!(" = {int_part}.");
     let linelen = if linelen == 0 { usize::MAX } else { println!(); linelen };
     for line in a.chunks(linelen / (WORDDIGITS+1)) {
-        for v in line.iter() { print!(" {value:0>width$}", width=WORDDIGITS, value=v) }
+        for v in line.iter() { print!(" {v:0>WORDDIGITS$}") }
         println!();
     }
 }
