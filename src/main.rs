@@ -168,7 +168,7 @@ fn get_scale(arg: Option<String>) -> Result<Xword> {
                     Ok(scale)
                 }
             },
-        },
+        }
     })
 }
 
@@ -241,7 +241,7 @@ fn printout(a: &[Xword], scale: Xword, linelen: usize) {
         8 => print!("τ"),
         4 => print!("π"),
         1 => print!("atan(1)"),
-        _ => print!("{scale}*atan(1)"),
+        _ => print!("{scale}*atan(1)")
     }
     print!(" = {int_part}.");
     let linelen = if linelen == 0 { usize::MAX } else { println!(); linelen };
