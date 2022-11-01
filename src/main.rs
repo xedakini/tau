@@ -141,6 +141,18 @@ macro_rules! atan_loop {
 }
 
 //-----------------------------------------------------------------
+// validate! is similar to std::assert!, except that it calls
+// std::process::exit(1) instead of panic!-ing
+macro_rules! validate {
+    () => {};
+    ($cond:expr, $($tail:tt)*) => {{
+        if ! $cond {
+            eprintln!($($tail)*);
+            std::process::exit(1);
+        }
+    }};
+}
+
 const fn max_digits() -> usize {
     // See the file Theory.pdf for the derivation of the relation used here.
     // The specific expression used here that the worst-case x being
@@ -162,10 +174,7 @@ fn get_scale(arg: Option<String>) -> Xword {
                 std::process::exit(1);
             },
             Ok(scale) => {
-                if scale < 0 {
-                    eprintln!("--scale argument may not be negative");
-                    std::process::exit(1);
-                }
+                validate!(scale>=0, "--scale argument may not be negative");
                 scale
             },
         },
@@ -221,18 +230,13 @@ fn parse_cmdline() -> (usize, usize, Xword) {
     }.parse_or_exit();
 
     let maxdigits = max_digits();
-    if ! rest.is_empty() {
-        eprintln!(
+    validate!(rest.is_empty(),
             "\nUsage: tau [options] [NumberOfDigits]\n\n\
              NumberOfDigits must be in the range {} to {}.\n\
              Use \"--help\" for more options.",
             WORDDIGITS, maxdigits);
-        std::process::exit(1);
-    }
-    if args.linelen <= WORDDIGITS  && args.linelen != 0 {
-        eprintln!("--linelen must be at least {}", WORDDIGITS+1);
-        std::process::exit(1);
-    }
+    validate!(args.linelen==0 || args.linelen>WORDDIGITS,
+              "--linelen must be at least {}", WORDDIGITS+1);
     let nwords = get_nwords(args.digits, args.ndigits, args.linelen, maxdigits);
     ( nwords, args.linelen, get_scale(args.scale) )
 }
