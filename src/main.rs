@@ -191,7 +191,7 @@ fn get_nwords(digit_opt: Option<usize>, digit_param: Option<usize>,
         } else if let Some(n) = digit_opt {
             n
         } else {
-            if linelen == 0 { return 42 } //whatever
+            validate!(linelen > 0, "--digits must be specified when --linelen=0");
             let digits_per_line = linelen / (WORDDIGITS+1);
             let n = digits_per_line * DEFLINES * WORDDIGITS;
             assert!(WORDDIGITS <= n && n <= maxdigits); //sanity check
