@@ -141,7 +141,7 @@ macro_rules! atan_loop {
 }
 
 //-----------------------------------------------------------------
-fn max_digits() -> usize {
+const fn max_digits() -> usize {
     // See the file Theory.pdf for the derivation of the relation used here.
     // The specific expression used here that the worst-case x being
     // computed for atan(x) is x=1/5; with the current code the worst case
@@ -153,44 +153,49 @@ fn max_digits() -> usize {
 }
 
 fn get_scale(arg: Option<String>) -> Xword {
-    if let Some(s) = arg {
-        match s.as_str() {
-            "tau"|"τ" => SCALE_TAU,
-            "pi" |"π" => SCALE_PI,
-            _ =>
-                match s.parse::<Xword>() {
-                    Err(e) => {
-                        eprintln!("error parsing scale: {}\n", e);
-                        std::process::exit(1);
-                    },
-                    Ok(scale) => scale,
-                },
-        }
-    } else {
-        DEFSCALE
-    }
+    arg.map_or(DEFSCALE, |s| match s.as_str() {
+        "tau" | "τ" => SCALE_TAU,
+        "pi"  | "π" => SCALE_PI,
+        _ => match s.parse::<Xword>() {
+            Err(e) => {
+                eprintln!("error parsing --scale argument: {}", e);
+                std::process::exit(1);
+            },
+            Ok(scale) => {
+                if scale < 0 {
+                    eprintln!("--scale argument may not be negative");
+                    std::process::exit(1);
+                }
+                scale
+            },
+        },
+    })
 }
 
 fn get_nwords(digit_opt: Option<usize>, digit_param: Option<usize>,
               linelen: usize, maxdigits: usize) -> usize {
-    let mut digits;
-    if let Some(n) = digit_param {
-        digits = n;
-    } else if let Some(n) = digit_opt {
-        digits = n;
-    } else {
-        let digits_per_line = linelen / (WORDDIGITS+1);
-        digits = digits_per_line * DEFLINES * WORDDIGITS;
-        assert!(WORDDIGITS <= digits && digits <= maxdigits); //sanity check
-        eprintln!("Using a default of {} digits.", digits);
-    }
-    if digits == 0 {
-        eprintln!("Setting to minimum of {} digits.", WORDDIGITS);
-        digits = WORDDIGITS;
-    } else if maxdigits < digits {
-        eprintln!("Clamping to maximum of {} digits.", maxdigits);
-        digits = maxdigits;
-    }
+    let digits =
+        if let Some(n) = digit_param {
+            n
+        } else if let Some(n) = digit_opt {
+            n
+        } else {
+            let digits_per_line = linelen / (WORDDIGITS+1);
+            let n = digits_per_line * DEFLINES * WORDDIGITS;
+            assert!(WORDDIGITS <= n && n <= maxdigits); //sanity check
+            eprintln!("Using a default of {} digits.", n);
+            n
+        };
+    let digits =
+        if digits == 0 {
+            eprintln!("Setting to minimum of {} digits.", WORDDIGITS);
+            WORDDIGITS
+        } else if maxdigits < digits {
+            eprintln!("Clamping to maximum of {} digits.", maxdigits);
+            maxdigits
+        } else {
+            digits
+        };
 
     //error[E0658]: needs nightly's 'int_roundings':
     //  digits.div_ceil(WORDDIGITS)
