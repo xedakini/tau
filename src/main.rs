@@ -198,7 +198,7 @@ fn get_nwords(digit_opt: Option<usize>, digit_param: Option<usize>,
             digits
         };
 
-    //error[E0658]: needs nightly's 'int_roundings':
+    //error[E0658]: needs nightly's 'int_roundings' (tracking #88581):
     //  digits.div_ceil(WORDDIGITS)
     let div_ceil = |n,d| { assert!(0 < n); 1 + (n-1)/d }; //roll our own :-(
 
