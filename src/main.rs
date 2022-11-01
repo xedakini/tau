@@ -16,6 +16,9 @@
    --kpp 2022-10-04
 */
 
+// override std::Result with anyhow::Result
+use anyhow::{anyhow,Result};
+
 // name a couple of constants that might be helpful in the next section
 #[allow(dead_code)]
 const SCALE_TAU  :Xword = 8;  // τ = 8 * atan(1) = tau = 2π
@@ -141,20 +144,6 @@ macro_rules! atan_loop {
 }
 
 //-----------------------------------------------------------------
-// validate! is similar to std::assert!, except that it calls
-// std::process::exit(1) instead of panic!-ing
-macro_rules! validate {
-    ($cond:expr) => {{
-        if ! $cond { std::process::exit(1) }
-    }};
-    ($cond:expr, $($message:tt)*) => {{
-        if ! $cond {
-            eprintln!($($message)*);
-            std::process::exit(1);
-        }
-    }};
-}
-
 const fn max_digits() -> usize {
     // See the file Theory.pdf for the derivation of the relation used here.
     // The specific expression used here that the worst-case x being
@@ -166,32 +155,34 @@ const fn max_digits() -> usize {
     (d - d % (WORDDIGITS as Xword)) as usize
 }
 
-fn get_scale(arg: Option<String>) -> Xword {
-    arg.map_or(DEFSCALE, |s| match s.as_str() {
-        "tau" | "τ" => SCALE_TAU,
-        "pi"  | "π" => SCALE_PI,
+fn get_scale(arg: Option<String>) -> Result<Xword> {
+    arg.map_or(Ok(DEFSCALE), |s| match s.as_str() {
+        "tau" | "τ" => Ok(SCALE_TAU),
+        "pi"  | "π" => Ok(SCALE_PI),
         _ => match s.parse::<Xword>() {
             Err(e) => {
-                eprintln!("error parsing --scale argument: {e}");
-                std::process::exit(1);
+                Err(anyhow!("error parsing --scale argument: {e}"))
             },
             Ok(scale) => {
-                validate!(scale>=0, "--scale argument may not be negative");
-                scale
+                if scale < 0 {
+                    Err(anyhow!("--scale argument may not be negative"))
+                } else {
+                    Ok(scale)
+                }
             },
         },
     })
 }
 
 fn get_nwords(digit_opt: Option<usize>, digit_param: Option<usize>,
-              linelen: usize, maxdigits: usize) -> usize {
+              linelen: usize, maxdigits: usize) -> Result<usize> {
     let digits =
         if let Some(n) = digit_param {
             n
         } else if let Some(n) = digit_opt {
             n
         } else {
-            validate!(linelen > 0, "--digits must be specified when --linelen=0");
+            if linelen == 0 { return Err(anyhow!("--digits must be specified when --linelen=0")) };
             let digits_per_line = linelen / (WORDDIGITS+1);
             let n = digits_per_line * DEFLINES * WORDDIGITS;
             assert!(WORDDIGITS <= n && n <= maxdigits); //sanity check
@@ -218,10 +209,10 @@ fn get_nwords(digit_opt: Option<usize>, digit_param: Option<usize>,
     let fraction_portion_words = div_ceil(digits, WORDDIGITS);
     let actual_digits = fraction_portion_words * WORDDIGITS;
     if digits != actual_digits { eprintln!("Rounding {digits} up to {actual_digits}") }
-    integer_portion_words + fraction_portion_words + error_terms_words
+    Ok(integer_portion_words + fraction_portion_words + error_terms_words)
 }
 
-fn parse_cmdline() -> (usize, usize, Xword) {
+fn parse_cmdline() -> Result<(usize, usize, Xword)> {
     let (args, rest) = rustop::opts! {
         synopsis "Compute τ (tau) to specified number of digits";
         opt digits:Option<usize>, desc:"the number of digits to compute";
@@ -232,14 +223,17 @@ fn parse_cmdline() -> (usize, usize, Xword) {
     }.parse_or_exit();
 
     let maxdigits = max_digits();
-    validate!(rest.is_empty(),
+    if ! rest.is_empty() {
+        return Err(anyhow!(
             "\nUsage: tau [options] [NumberOfDigits]\n\n\
              NumberOfDigits must be in the range {WORDDIGITS} to {maxdigits}.\n\
-             Use \"--help\" for more options.");
-    validate!(args.linelen==0 || args.linelen>WORDDIGITS,
-              "--linelen must be at least {}", WORDDIGITS+1);
-    let nwords = get_nwords(args.digits, args.ndigits, args.linelen, maxdigits);
-    ( nwords, args.linelen, get_scale(args.scale) )
+             Use \"--help\" for more options."));
+    }
+    if args.linelen!=0 && args.linelen<=WORDDIGITS {
+        return Err(anyhow!("--linelen must be at least {}", WORDDIGITS+1));
+    }
+    let nwords = get_nwords(args.digits, args.ndigits, args.linelen, maxdigits)?;
+    Ok((nwords, args.linelen, get_scale(args.scale)?))
 }
 
 fn printout(a: &[Xword], scale: Xword, linelen: usize) {
@@ -259,8 +253,8 @@ fn printout(a: &[Xword], scale: Xword, linelen: usize) {
     }
 }
 
-fn main() {
-    let (nwords, linelen, scale) = parse_cmdline();
+fn main() -> Result<()> {
+    let (nwords, linelen, scale) = parse_cmdline()?;
     let cputime = cpu_time::ProcessTime::now();
 
     // atan(1) = 8*atan(1/10) - atan(1/239) - 4*atan(1/515)
@@ -288,4 +282,5 @@ fn main() {
     let elapsed = cputime.elapsed();
     printout(&s, scale, linelen);
     eprintln!("Computation time = {:.2?}", elapsed);
+    Ok(())
 }
