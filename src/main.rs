@@ -17,13 +17,13 @@
 */
 
 // override std::Result with anyhow::Result
-use anyhow::{anyhow,Result};
+use anyhow::{anyhow, Result};
 
 // name a couple of constants that might be helpful in the next section
 #[allow(dead_code)]
-const SCALE_TAU  :Xword = 8;  // τ = 8 * atan(1) = tau = 2π
+const SCALE_TAU: Xword = 8; // τ = 8 * atan(1) = tau = 2π
 #[allow(dead_code)]
-const SCALE_PI   :Xword = 4;  // π = 4 * atan(1) = pi = τ/2
+const SCALE_PI:  Xword = 4; // π = 4 * atan(1) = pi = τ/2
 
 // --- customizable section ---
 
@@ -38,12 +38,12 @@ const SCALE_PI   :Xword = 4;  // π = 4 * atan(1) = pi = τ/2
 // larger excessively constrains the maximum number of digits which can
 // be computed.  For Xword=i64, I suggest WORDDIGITS=12.
 type Xword = i64; // must be signed and able to hold all possible intermediate values
-const WORDDIGITS :usize = 12;  //number of decimal digits in each computation unit
+const WORDDIGITS: usize = 12; //number of decimal digits in each computation unit
 
 // define some default values:
-const DEFLINELEN :usize = 80;  //keep output lines no longer than this length
-const DEFLINES   :usize = 2;   //the number of lines to output if default digit count chosen
-const DEFSCALE   :Xword = SCALE_TAU; //SCALE_PI is another popular choice
+const DEFLINELEN: usize = 80; //keep output lines no longer than this length
+const DEFLINES:   usize = 2;  //the number of lines to output if default digit count chosen
+const DEFSCALE:   Xword = SCALE_TAU; //SCALE_PI is another popular choice
 
 // --- there ought to be no moving parts left below this point ---
 
@@ -140,7 +140,7 @@ macro_rules! atan_loop {
                 if firstnonzero >= $nwords { break 'outer sum }
             }
         }
-    }}
+    }};
 }
 
 //-----------------------------------------------------------------
@@ -160,9 +160,7 @@ fn get_scale(arg: Option<String>) -> Result<Xword> {
         "tau" | "τ" => Ok(SCALE_TAU),
         "pi"  | "π" => Ok(SCALE_PI),
         _ => match s.parse::<Xword>() {
-            Err(e) => {
-                Err(anyhow!("error parsing --scale argument: {e}"))
-            },
+            Err(e) => Err(anyhow!("error parsing --scale argument: {e}")),
             Ok(scale) => {
                 if scale < 0 {
                     Err(anyhow!("--scale argument may not be negative"))
