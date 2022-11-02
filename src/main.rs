@@ -1,30 +1,39 @@
-/* Credit where due: the inspiration for this code
-   was a posting to comp.lang.c for computing pi:
-     From: jasonp@Glue.umd.edu (Jason Stratos Papadopoulos)
-     Newsgroups: sci.math,comp.lang.c
-     Subject: here's a program to calculate pi, in C, version 4.5
-     Date: 16 Feb 1997 07:25:10 GMT
-     Message-ID: <5e6com$j3e@hecate.umd.edu>
-
-   The core idea of computing N*atan(1) [for a mathematically
-   equivalent but computationally better behaved expression] remains,
-   and the basic approach to multi-precision calculation is the
-   same. Otherwise, apart from some random vestiges (such as error
-   messages for the argument parsing), this is a complete rewrite
-   in rust.  Also note that the default has been changed here to
-   compute 8*atan(1) (aka "tau") instead of 4*atan(1) (aka "pi").
-   --kpp 2022-10-04
-*/
+//! # tau
+//!
+//! `tau` is a program to compute the digits of the circle constant τ.
+//! It can also be used to compute the digits of π, or any other integer
+//! multiple of atan(1).
+//!
+//! Credit where due: the inspiration for this code
+//! was a posting to comp.lang.c for computing pi:
+//!    <pre><code>From: jasonp@Glue.umd.edu (Jason Stratos Papadopoulos)
+//!    Newsgroups: sci.math,comp.lang.c
+//!    Subject: here's a program to calculate pi, in C, version 4.5
+//!    Date: 16 Feb 1997 07:25:10 GMT
+//!    Message-ID: <5e6com$j3e@hecate.umd.edu>
+//!    </code></pre>
+//!
+//! The core idea of computing _N_&times;atan(1) [for a mathematically
+//! equivalent but computationally better behaved expression] remains,
+//! and the basic approach to multi-precision calculation is the same.
+//! Otherwise, apart from some random vestiges (such as error messages
+//! for the argument parsing), this is a complete rewrite in rust.
+//! Also note that the default has been changed here to compute 8&times;atan(1)
+//! (aka "tau") instead of 4&times;atan(1) (aka "pi").
 
 // override std::Result with anyhow::Result
 use anyhow::{anyhow, Result};
 use num::Integer; // for .div_ceil(), until tracking #88581 is resolved
 
-// name a couple of constants that might be helpful in the next section
+// name a couple of constants that might be helpful in the next section:
+
+/// SCALE_TAU is used to compute τ = 8 * atan(1) = tau = 2π.
 #[allow(dead_code)]
-const SCALE_TAU: Xword = 8; // τ = 8 * atan(1) = tau = 2π
+const SCALE_TAU: Xword = 8;
+
+/// SCALE_PI is used to compute π = 4 * atan(1) = pi = τ/2.
 #[allow(dead_code)]
-const SCALE_PI:  Xword = 4; // π = 4 * atan(1) = pi = τ/2
+const SCALE_PI:  Xword = 4;
 
 // --- customizable section ---
 
@@ -38,17 +47,25 @@ const SCALE_PI:  Xword = 4; // π = 4 * atan(1) = pi = τ/2
 // libdivide crate).  For Xword=i32, I suggest WORDDIGITS=4, as anything
 // larger excessively constrains the maximum number of digits which can
 // be computed.  For Xword=i64, I suggest WORDDIGITS=12.
-type Xword = i64; // must be signed and able to hold all possible intermediate values
-const WORDDIGITS: usize = 12; //number of decimal digits in each computation unit
+
+/// The basic type used for calculations.
+type Xword = i64;
+/// The number of decimal digits in each computation unit.
+const WORDDIGITS: usize = 12;
 
 // define some default values:
-const DEFLINELEN: usize = 80; //keep output lines no longer than this length
-const DEFLINES:   usize = 2;  //the number of lines to output if default digit count chosen
-const DEFSCALE:   Xword = SCALE_TAU; //SCALE_PI is another popular choice
+
+/// Keep output lines no longer than this length (default value).
+const DEFLINELEN: usize = 80;
+/// The number of lines to output if default digit count chosen.
+const DEFLINES:   usize = 2;
+/// The default scaling of atan(1) to use.  SCALE_PI is another popular choice.
+const DEFSCALE:   Xword = SCALE_TAU;
 
 // --- there ought to be no moving parts left below this point ---
 
-// derive "BASE" from WORDDIGITS; we adjust computations to be in this base
+// derive "BASE" from WORDDIGITS
+/// Computations are adjusted to be done relative to this base.
 const BASE: Xword = (10 as Xword).pow(WORDDIGITS as u32);
 
 use static_assertions::const_assert;
@@ -78,11 +95,16 @@ const_assert!(((Xword::MAX / (BASE+1)) as u64) < (usize::MAX as u64));
 // enough: we need the compiler to see that certain "variables" are in fact
 // compile-time constants, and optimize accordingly.
 
+/// used to indicate whether atan_grind! should increment or decrement
+/// the current term to/from the running total
 enum SumOp { Increment, Decrement }
 
 // We write this as a macro so that the compiler sees $xxinv and $op as
 // constants.  This is an innermost-loop calculation, so optimizing
 // it is important for performance.
+/// Grind out one step of the atan() computation, applied to both
+/// the current-term of the series and to the running-sum of the
+/// various terms.
 macro_rules! atan_grind {
     ($r1:ident, $r2:ident, $term:ident, $sum:ident,
      $xxinv:expr, $d:expr, $dinv:expr, $op:expr) => {{
@@ -107,6 +129,7 @@ macro_rules! atan_grind {
 }
 
 // this is just a macro so that a constant $xinv is propagated aggressively
+/// Loop to compute scale*atan(1/xinv) to nwords of precision.
 macro_rules! atan_loop {
     ($nwords:expr, $scale:expr, $xinv:expr) => {{
         let mut term = Vec::new();
@@ -145,6 +168,8 @@ macro_rules! atan_loop {
 }
 
 //-----------------------------------------------------------------
+
+/// Determine the scaling of atan(1) to use, per command-line request.
 fn get_scale(arg: Option<String>) -> Result<Xword> {
     arg.map_or(Ok(DEFSCALE), |s| match s.as_str() {
         "tau" | "τ" => Ok(SCALE_TAU),
@@ -162,6 +187,7 @@ fn get_scale(arg: Option<String>) -> Result<Xword> {
     })
 }
 
+/// Handle the determination of the number of decimal digits to compute and print.
 fn get_nwords(digit_opt: Option<usize>, digit_param: Option<usize>,
               linelen: usize, maxdigits: usize) -> Result<usize> {
     let digits =
@@ -197,6 +223,7 @@ fn get_nwords(digit_opt: Option<usize>, digit_param: Option<usize>,
     Ok(integer_portion_words + fraction_portion_words + error_terms_words)
 }
 
+/// Determine the run-time options requested by the end-user.
 fn parse_cmdline() -> Result<(usize, usize, Xword)> {
     let (args, rest) = rustop::opts! {
         synopsis "Compute τ (tau) to specified number of digits";
@@ -229,6 +256,7 @@ fn parse_cmdline() -> Result<(usize, usize, Xword)> {
     Ok((nwords, args.linelen, get_scale(args.scale)?))
 }
 
+/// Output the value of the number packaged in the passed slice of Xword-s.
 fn printout(a: &[Xword], scale: Xword, linelen: usize) {
     let (int_part, a) = a.split_first().unwrap_or((&0, &[]));
     let (_err_part, a) = a.split_last().unwrap_or((&0, &[]));
