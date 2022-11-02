@@ -27,11 +27,11 @@ use num::Integer; // for .div_ceil(), until tracking #88581 is resolved
 
 // name a couple of constants that might be helpful in the next section:
 
-/// SCALE_TAU is used to compute τ = 8 * atan(1) = tau = 2π.
+/// `SCALE_TAU` is used to compute τ = 8 &times; atan(1) = tau = 2π.
 #[allow(dead_code)]
 const SCALE_TAU: Xword = 8;
 
-/// SCALE_PI is used to compute π = 4 * atan(1) = pi = τ/2.
+/// `SCALE_PI` is used to compute π = 4 &times; atan(1) = pi = τ/2.
 #[allow(dead_code)]
 const SCALE_PI:  Xword = 4;
 
@@ -59,7 +59,7 @@ const WORDDIGITS: usize = 12;
 const DEFLINELEN: usize = 80;
 /// The number of lines to output if default digit count chosen.
 const DEFLINES:   usize = 2;
-/// The default scaling of atan(1) to use.  SCALE_PI is another popular choice.
+/// The default scaling of atan(1) to use.  `SCALE_PI` is another popular choice.
 const DEFSCALE:   Xword = SCALE_TAU;
 
 // --- there ought to be no moving parts left below this point ---
@@ -95,7 +95,7 @@ const_assert!(((Xword::MAX / (BASE+1)) as u64) < (usize::MAX as u64));
 // enough: we need the compiler to see that certain "variables" are in fact
 // compile-time constants, and optimize accordingly.
 
-/// used to indicate whether atan_grind! should increment or decrement
+/// used to indicate whether `atan_grind!` should increment or decrement
 /// the current term to/from the running total
 enum SumOp { Increment, Decrement }
 
@@ -129,7 +129,7 @@ macro_rules! atan_grind {
 }
 
 // this is just a macro so that a constant $xinv is propagated aggressively
-/// Loop to compute scale*atan(1/xinv) to nwords of precision.
+/// Loop to compute `scale`&times;atan(1/`xinv`) to `nwords` of precision.
 macro_rules! atan_loop {
     ($nwords:expr, $scale:expr, $xinv:expr) => {{
         let mut term = Vec::new();
@@ -256,7 +256,7 @@ fn parse_cmdline() -> Result<(usize, usize, Xword)> {
     Ok((nwords, args.linelen, get_scale(args.scale)?))
 }
 
-/// Output the value of the number packaged in the passed slice of Xword-s.
+/// Output the value of the number packaged in the passed slice of `Xword`-s.
 fn printout(a: &[Xword], scale: Xword, linelen: usize) {
     let (int_part, a) = a.split_first().unwrap_or((&0, &[]));
     let (_err_part, a) = a.split_last().unwrap_or((&0, &[]));
