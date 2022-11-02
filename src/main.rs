@@ -232,9 +232,9 @@ fn parse_cmdline() -> Result<(usize, usize, Xword)> {
     }.parse_or_exit();
 
     // See the file Theory.pdf for the derivation of the relation used here.
-    // The specific expression used here that the worst-case x being
-    // computed for atan(x) is x=1/5; with the current code the worst case
-    // is in fact x=1/10, but for now at least I'll stick with the more
+    // The specific expression used here takes x=1/5 as the worst-case x
+    // being used in an atan(x) computation; with the current code the worst
+    // case is in fact x=1/10, but for now at least I'll stick with the more
     // pessimistic x=1/5.
     // Note that 339/485 is a truncated approximation of log10(5).
     let maxdigits = (Xword::MAX / (BASE+1) + 1) * 339 / 485;
