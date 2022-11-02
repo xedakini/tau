@@ -24,6 +24,7 @@
 // override std::Result with anyhow::Result
 use anyhow::{anyhow, Result};
 use num::Integer; // for .div_ceil(), until tracking #88581 is resolved
+use libdivide::Divider; // for cheap amortized-cost repeated quasi-constant divisions
 
 // name a couple of constants that might be helpful in the next section:
 
@@ -90,46 +91,43 @@ const_assert!(((Xword::MAX / (BASE+1)) as u64) < (usize::MAX as u64));
 */
 
 //-----------------------------------------------------------------
-// The routines in this section are performance-critical, to the point that
-// we write both of them as macros.  Normal in-lining isn't aggressive
+// The routines in this section are performance-critical, to the point
+// that we write two of them as macros.  Normal in-lining isn't aggressive
 // enough: we need the compiler to see that certain "variables" are in fact
-// compile-time constants, and optimize accordingly.
+// compile-time constants, and optimize accordingly.  (Multiplications are
+// cheaper than divisions on (almost?) all platforms, and the compiler
+// knows this and, at least with "release build" levels of optimization,
+// will apply the appropriate transformations needed to replace the division
+// with multiply-by-inverse logic when it notices division by a compile-time
+// constant.)
+//
+// Furthermore, in the case where we do not have a compile-time constant,
+// but we are dividing a (potentially long) vector of integers by the same
+// value (as we do for each "divide by 2*i+1" step in computing the Taylor
+// series on our extended-precision math), the libdivide crate allows us to
+// compute a multiplicative inverse which can be used to achieve the bulk
+// divisions using bulk multiplications instead — a big performance win!
 
-/// used to indicate whether `atan_grind!` should increment or decrement
-/// the current term to/from the running total
-enum SumOp { Increment, Decrement }
-
-// We write this as a macro so that the compiler sees $xxinv and $op as
-// constants.  This is an innermost-loop calculation, so optimizing
-// it is important for performance.
-/// Grind out one step of the atan() computation, applied to both
-/// the current-term of the series and to the running-sum of the
-/// various terms.
-macro_rules! atan_grind {
-    ($r1:ident, $r2:ident, $term:ident, $sum:ident,
-     $xxinv:expr, $d:expr, $dinv:expr, $op:expr) => {{
-        // compute new term
-        let v = $r1 * BASE + *$term;
-        // We assume that, at least for release builds, the compiler will
-        // do libdivide-like optimization on the compile-time constant $xxinv
-        *$term = v / $xxinv;
-        $r1 = v % $xxinv;
-
-        // apply newly computed term to the running sum
-        let v = $r2 * BASE + *$term;
-        let q = v / $dinv; // use libdivide to replace actual division with
-        $r2 = v - q*$d;    // multiplication-by-inverse logic
-        match $op {
-            // $op ought to be a compile-time constant, so the generated
-            // code should just become one unconditional op.
-            SumOp::Increment => *$sum += q,
-            SumOp::Decrement => *$sum -= q,
-        }
+// We write this as a macro so that the compiler will see that $xxinv is a compile-time constant.
+/// Compute the new value for the current "digit" of the current term in the Taylor series.
+macro_rules! next_atan_numerator {
+    ($term:expr, $residue:expr, $xxinv:expr) => {{
+        let v = $term + BASE*$residue;
+        (v/$xxinv, v%$xxinv)
     }};
 }
 
-// this is just a macro so that a constant $xinv is propagated aggressively
-/// Loop to compute `scale`&times;atan(1/`xinv`) to `nwords` of precision.
+/// Compute the adjustment to the next "digit" in the running-sum of
+/// the terms of the Taylor series.
+#[inline]
+fn next_atan_term(term: Xword, residue: Xword, dinv: &Divider<Xword>, d: Xword) -> (Xword, Xword) {
+    let v = term + BASE*residue;
+    let q = v / dinv; //libdivide implements this division with multiplication-by-inverse logic
+    (q, v-q*d) //calculate the modulo using a multiplication
+}
+
+// This is only a macro to ensure that $xinv remains seen as a compile-time constant.
+/// Loop to compute `scale` &times; atan(1/`xinv`) to `nwords` of precision.
 macro_rules! atan_loop {
     ($nwords:expr, $scale:expr, $xinv:expr) => {{
         let mut term = Vec::new();
@@ -138,25 +136,24 @@ macro_rules! atan_loop {
 
         let (mut sum, mut firstnonzero, mut denom) = (term.to_vec(), 0, 1);
 
-        // We divide a potentially long vector of values by the same divisor; on most
-        // machines, division is much slower than multiplication; libdivide allows us
-        // to compute a multiplicative inverse which can be used to achieve the bulk
-        // divisions using bulk multiplications instead — a big performance win!
         let mut next_denom = || {
             denom += 2;
-            let inv = libdivide::Divider::new(denom).expect("libdivide initialization error");
-            (denom, inv, 0, 0)
+            let inv = Divider::new(denom).expect("libdivide initialization error");
+            (0, 0, denom, inv)
         };
 
         'outer: loop {
-            let (denom0, denom0inv, mut remainder0, mut remainder1) = next_denom();
-            let (denom2, denom2inv, mut remainder2, mut remainder3) = next_denom();
+            let (mut remainder0, mut remainder1, denom1, denom1inv) = next_denom();
+            let (mut remainder2, mut remainder3, denom3, denom3inv) = next_denom();
+            let mut delta;
             for (term,sum) in term[firstnonzero..].iter_mut()
                           .zip(sum[firstnonzero..].iter_mut()) {
-                atan_grind!(remainder0, remainder1, term, sum,
-                            $xinv*$xinv, denom0, &denom0inv, SumOp::Decrement);
-                atan_grind!(remainder2, remainder3, term, sum,
-                            $xinv*$xinv, denom2, &denom2inv, SumOp::Increment);
+                (*term, remainder0) = next_atan_numerator!(*term, remainder0, $xinv*$xinv);
+                (delta, remainder1) = next_atan_term(*term, remainder1, &denom1inv, denom1);
+                *sum -= delta;
+                (*term, remainder2) = next_atan_numerator!(*term, remainder2, $xinv*$xinv);
+                (delta, remainder3) = next_atan_term(*term, remainder3, &denom3inv, denom3);
+                *sum += delta;
             }
 
             while term[firstnonzero] == 0 {
@@ -264,7 +261,7 @@ fn printout(a: &[Xword], scale: Xword, linelen: usize) {
         8 => print!("τ"),
         4 => print!("π"),
         1 => print!("atan(1)"),
-        _ => print!("{scale}*atan(1)")
+        _ => print!("{scale} × atan(1)")
     }
     print!(" = {int_part}.");
     let linelen = if linelen == 0 { usize::MAX } else { println!(); linelen };
