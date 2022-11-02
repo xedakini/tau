@@ -144,17 +144,6 @@ macro_rules! atan_loop {
 }
 
 //-----------------------------------------------------------------
-const fn max_digits() -> usize {
-    // See the file Theory.pdf for the derivation of the relation used here.
-    // The specific expression used here that the worst-case x being
-    // computed for atan(x) is x=1/5; with the current code the worst case
-    // is in fact x=1/10, but for now at least I'll stick with the more
-    // pessimistic x=1/5.
-    // Note that 339/485 is a truncated approximation of log10(5).
-    let d = (Xword::MAX / (BASE+1) + 1) * 339 / 485;
-    (d - d % (WORDDIGITS as Xword)) as usize
-}
-
 fn get_scale(arg: Option<String>) -> Result<Xword> {
     arg.map_or(Ok(DEFSCALE), |s| match s.as_str() {
         "tau" | "τ" => Ok(SCALE_TAU),
@@ -220,7 +209,15 @@ fn parse_cmdline() -> Result<(usize, usize, Xword)> {
         param ndigits:Option<usize>, desc:"the number of digits to compute (overrides -d)";
     }.parse_or_exit();
 
-    let maxdigits = max_digits();
+    // See the file Theory.pdf for the derivation of the relation used here.
+    // The specific expression used here that the worst-case x being
+    // computed for atan(x) is x=1/5; with the current code the worst case
+    // is in fact x=1/10, but for now at least I'll stick with the more
+    // pessimistic x=1/5.
+    // Note that 339/485 is a truncated approximation of log10(5).
+    let maxdigits = (Xword::MAX / (BASE+1) + 1) * 339 / 485;
+    let maxdigits = (maxdigits - maxdigits % (WORDDIGITS as Xword)) as usize;
+
     if ! rest.is_empty() {
         return Err(anyhow!(
             "\nUsage: tau [options] [NumberOfDigits]\n\n\
