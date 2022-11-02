@@ -18,6 +18,7 @@
 
 // override std::Result with anyhow::Result
 use anyhow::{anyhow, Result};
+use num::Integer; // for .div_ceil(), until tracking #88581 is resolved
 
 // name a couple of constants that might be helpful in the next section
 #[allow(dead_code)]
@@ -187,13 +188,10 @@ fn get_nwords(digit_opt: Option<usize>, digit_param: Option<usize>,
             digits
         };
 
-    //error[E0658]: needs nightly's 'int_roundings' (tracking #88581):
-    //  digits.div_ceil(WORDDIGITS)
-    let div_ceil = |n,d| { assert!(0 < n); 1 + (n-1)/d }; //roll our own :-(
-
     // convert requested number of digits to the number of Xwords we need to allocate
     let (integer_portion_words, error_terms_words) = (1, 1);
-    let fraction_portion_words = div_ceil(digits, WORDDIGITS);
+    #[allow(unstable_name_collisions)]  //using div_ceil from num::Integer; clean-up when in std
+    let fraction_portion_words = digits.div_ceil(&WORDDIGITS);
     let actual_digits = fraction_portion_words * WORDDIGITS;
     if digits != actual_digits { eprintln!("Rounding {digits} up to {actual_digits}") }
     Ok(integer_portion_words + fraction_portion_words + error_terms_words)
