@@ -149,7 +149,7 @@ fn get_scale(arg: Option<String>) -> Result<Xword> {
         "tau" | "τ" => Ok(SCALE_TAU),
         "pi"  | "π" => Ok(SCALE_PI),
         _ => match s.parse::<Xword>() {
-            Err(e) => Err(anyhow!("error parsing --scale argument: {e}")),
+            Err(e) => Err(anyhow!("--scale could not be parsed: {e}")),
             Ok(scale) => {
                 if scale < 0 {
                     Err(anyhow!("--scale argument may not be negative"))
