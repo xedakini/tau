@@ -23,8 +23,8 @@
 
 // override std::Result with anyhow::Result
 use anyhow::{anyhow, Result};
-use num::Integer; // for .div_ceil(), until tracking #88581 is resolved
 use libdivide::Divider; // for cheap amortized-cost repeated quasi-constant divisions
+use num::Integer; // for .div_ceil(), until tracking #88581 is resolved
 
 // Name a couple of constants that might be helpful in the "customizable" section below.
 
@@ -135,7 +135,7 @@ fn next_atan_term(term: Xword, residue: Xword, dinv: &Divider<Xword>, d: Xword) 
 
 // This is only a macro to ensure that $xinv remains seen as a compile-time constant.
 /// Compute `scale` &times; atan(1/`xinv`) to `nwords` base-`BASE` "digits" of precision.
-macro_rules! atan_loop {
+macro_rules! atan {
     ($nwords:expr, $scale:expr, $xinv:expr) => {{
         let mut term = Vec::new();
         let mut r = $scale;
@@ -234,7 +234,7 @@ fn parse_cmdline() -> Result<(usize, usize, Xword)> {
         opt digits:Option<usize>, desc:"the number of digits to compute";
         opt linelen:usize=DEFLINELEN, desc:"the (maximum) length of an output line";
         opt scale:Option<String>,
-              desc:"compute scale*atan(1); can use 'tau', 'pi', or an integer";
+              desc:"compute `scale`×atan(1); can specify 'tau', 'pi', or an integer";
         param ndigits:Option<usize>, desc:"the number of digits to compute (overrides -d)";
     }.parse_or_exit();
 
@@ -253,7 +253,7 @@ fn parse_cmdline() -> Result<(usize, usize, Xword)> {
              NumberOfDigits must be in the range {WORDDIGITS} to {maxdigits}.\n\
              Use \"--help\" for more options."));
     }
-    if args.linelen!=0 && args.linelen<=WORDDIGITS {
+    if args.linelen<=WORDDIGITS && args.linelen!=0 {
         return Err(anyhow!("--linelen must be at least {}", WORDDIGITS+1));
     }
     let nwords = get_nwords(args.digits, args.ndigits, args.linelen, maxdigits)?;
@@ -287,10 +287,10 @@ fn main() -> Result<()> {
     let (nwords, linelen, scale) = parse_cmdline()?;
     let cputime = cpu_time::ProcessTime::now();
 
-    // atan(1) = 8*atan(1/10) - atan(1/239) - 4*atan(1/515)
-    let mut s = atan_loop!(nwords, scale*8,  10);
-    let  s239 = atan_loop!(nwords, scale*1, 239);
-    let  s515 = atan_loop!(nwords, scale*4, 515);
+    // atan(1) = 8 atan(1/10) - atan(1/239) - 4 atan(1/515)
+    let mut s = atan!(nwords, scale*8,  10);
+    let  s239 = atan!(nwords, scale*1, 239);
+    let  s515 = atan!(nwords, scale*4, 515);
 
     // combine sums into s, while fixing-up any out-of-spec digits
     let mut carry = 0;
