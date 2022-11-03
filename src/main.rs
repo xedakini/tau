@@ -17,7 +17,7 @@
 //! equivalent but computationally better behaved expression] remains,
 //! and the basic approach to multi-precision calculation is the same.
 //! Otherwise, apart from some random vestiges (such as error messages
-//! for the argument parsing), this is a complete rewrite in rust.
+//! from argument parsing), this is a complete rewrite in Rust.
 //! Also note that the default has been changed here to compute 8&times;atan(1)
 //! (aka "tau") instead of 4&times;atan(1) (aka "pi").
 
@@ -26,7 +26,7 @@ use anyhow::{anyhow, Result};
 use num::Integer; // for .div_ceil(), until tracking #88581 is resolved
 use libdivide::Divider; // for cheap amortized-cost repeated quasi-constant divisions
 
-// name a couple of constants that might be helpful in the next section:
+// Name a couple of constants that might be helpful in the "customizable" section below.
 
 /// `SCALE_TAU` is used to compute τ = 8 &times; atan(1) = tau = 2π.
 #[allow(dead_code)]
@@ -58,7 +58,7 @@ const WORDDIGITS: usize = 12;
 
 /// Keep output lines no longer than this length (default value).
 const DEFLINELEN: usize = 80;
-/// The number of lines to output if default digit count chosen.
+/// The number of lines to output if the user does not select a digit count.
 const DEFLINES:   usize = 2;
 /// The default scaling of atan(1) to use.  `SCALE_PI` is another popular choice.
 const DEFSCALE:   Xword = SCALE_TAU;
@@ -74,8 +74,13 @@ const_assert!((-1 as Xword) < 0 && 0 < Xword::BITS); //Xword must be a signed in
 const_assert!(1 <= WORDDIGITS && WORDDIGITS < DEFLINELEN); //sanity constraints
 const_assert!(((Xword::MAX / (BASE+1)) as u64) < (usize::MAX as u64));
 
+//-----------------------------------------------------------------
 /*
-  First, note that: tau/8 = pi/4 = atan(1).
+   Background:
+
+   This program computes scale×atan(1).  Since τ/8 = π/4 = atan(1),
+   we can readily compute τ or π by choosing `scale` to be either
+   8 or 4 (respectively).
 
   The Taylor-Maclaurin series for atan(x) (when abs(x) <= 1) is:
       atan(x) = \sum_0^\infty (-1)^n x^{2n+1} / {2n+1}
@@ -83,30 +88,32 @@ const_assert!(((Xword::MAX / (BASE+1)) as u64) < (usize::MAX as u64));
 
    The Taylor-Maclaurin series for atan(1) itself converges rather
    slowly, but by using the identity
-     atan(1) = 8*atan(1/10) - atan(1/239) - 4*atan(1/515)
-   we get three readily combinable terms which each converge from
-   quickly to very-quickly.
+     atan(1) = 8 atan(1/10) - atan(1/239) - 4 atan(1/515)
+   we get three readily combinable terms which each converge either
+   quickly or very-quickly.
 
    See the file "Theory.pdf" for further details.
 */
 
-//-----------------------------------------------------------------
-// The routines in this section are performance-critical, to the point
-// that we write two of them as macros.  Normal in-lining isn't aggressive
-// enough: we need the compiler to see that certain "variables" are in fact
-// compile-time constants, and optimize accordingly.  (Multiplications are
-// cheaper than divisions on (almost?) all platforms, and the compiler
-// knows this and, at least with "release build" levels of optimization,
-// will apply the appropriate transformations needed to replace the division
-// with multiply-by-inverse logic when it notices division by a compile-time
-// constant.)
-//
-// Furthermore, in the case where we do not have a compile-time constant,
-// but we are dividing a (potentially long) vector of integers by the same
-// value (as we do for each "divide by 2*i+1" step in computing the Taylor
-// series on our extended-precision math), the libdivide crate allows us to
-// compute a multiplicative inverse which can be used to achieve the bulk
-// divisions using bulk multiplications instead — a big performance win!
+/*
+   The routines in this section are performance-critical, to the point
+   that we write two of them as macros — normal in-lining isn't aggressive
+   enough.  We need the compiler to see that certain "variables" are in fact
+   compile-time constants, and optimize accordingly.  (Multiplications are
+   cheaper than divisions on (almost?) all platforms, and the compiler
+   knows this and, at least with "release build" levels of optimization,
+   will apply the appropriate transformations needed to replace the division
+   with multiply-by-inverse logic when it notices division by a compile-time
+   constant.)
+
+   Furthermore, in the case where we do not have a compile-time constant,
+   but we are dividing a (potentially long) vector of integers by the same
+   value (as we do for each "divide by 2*i+1" step in computing the Taylor
+   series with our extended-precision math), the libdivide crate allows us
+   to (in effect) compute a multiplicative inverse which can be used to
+   achieve the bulk divisions using bulk multiplications instead — a big
+   performance win!
+*/
 
 // We write this as a macro so that the compiler will see that $xxinv is a compile-time constant.
 /// Compute the new value for the current "digit" of the current term in the Taylor series.
@@ -127,7 +134,7 @@ fn next_atan_term(term: Xword, residue: Xword, dinv: &Divider<Xword>, d: Xword) 
 }
 
 // This is only a macro to ensure that $xinv remains seen as a compile-time constant.
-/// Loop to compute `scale` &times; atan(1/`xinv`) to `nwords` of precision.
+/// Compute `scale` &times; atan(1/`xinv`) to `nwords` base-`BASE` "digits" of precision.
 macro_rules! atan_loop {
     ($nwords:expr, $scale:expr, $xinv:expr) => {{
         let mut term = Vec::new();
@@ -236,7 +243,7 @@ fn parse_cmdline() -> Result<(usize, usize, Xword)> {
     // being used in an atan(x) computation; with the current code the worst
     // case is in fact x=1/10, but for now at least I'll stick with the more
     // pessimistic x=1/5.
-    // Note that 339/485 is a truncated approximation of log10(5).
+    // Note that 339/485 is a slightly-smaller-than approximation of log10(5).
     let maxdigits = (Xword::MAX / (BASE+1) + 1) * 339 / 485;
     let maxdigits = (maxdigits - maxdigits % (WORDDIGITS as Xword)) as usize;
 
@@ -285,7 +292,7 @@ fn main() -> Result<()> {
     let  s239 = atan_loop!(nwords, scale*1, 239);
     let  s515 = atan_loop!(nwords, scale*4, 515);
 
-    // combine sums (into s) while fixing-up any out-of-spec digits
+    // combine sums into s, while fixing-up any out-of-spec digits
     let mut carry = 0;
     for (d, (a, b)) in
         s.iter_mut().rev()
@@ -294,7 +301,7 @@ fn main() -> Result<()> {
     {
         let mut v = carry + *d - a - b;
         carry = 0;
-        // digits are typically close-enough to in-spec that doing
+        // value will be close-enough to in-spec that doing
         // a division will be more expensive than this loop pair
         while v < 0     { v+=BASE; carry-=1 }
         while BASE <= v { v-=BASE; carry+=1 }
