@@ -115,18 +115,19 @@ const_assert!(((Xword::MAX / (BASE+1)) as u64) < (usize::MAX as u64));
    performance win!
 */
 
-// We write this as a macro so that the compiler will see that either $alt_divisor
-// is a compile-time constant, or it is a libdivide::Divisor.  We then compute the
-// modulo via a multiplication: since no machine-DIV instruction was used for the
-// division (which might have given us the modulo at no additonal cost), we want
-// to obtain the remainder without having to do a DIV call now.
+// We write this as a macro so that the compiler will see that either
+// $alt_divisor is a compile-time constant, or it is a libdivide::Divisor.
+// We then compute the modulo via a multiplication and a subtraction:
+// since no machine-DIV instruction was used for the division (which might
+// have given us the modulo at no additional cost), we want to obtain the
+// remainder without having to do a DIV call now either.
 /// Compute the next step of the multi-precision calculation.
 macro_rules! divmod_step {
-    ($old_value:expr, $cur_residue:expr, $divisor:expr, $alt_divisor:expr) => {{
-        let v = $old_value + BASE*$cur_residue;
-        let q = v / $alt_divisor; //might be int constant, might be libdivide::Divisor
-        let r = v - q*$divisor; //always an integer related to $alt_divisor
-        (q, r)
+    ($register:ident, $value:expr, $divisor:expr, $alt_divisor:expr) => {{
+        $register = $register * BASE + $value;
+        let q = $register / $alt_divisor; //might be int constant, might be libdivide::Divisor
+        $register -= q * $divisor; //where $divisor/$alt_divisor == 1
+        q
     }};
 }
 
@@ -147,17 +148,15 @@ macro_rules! atan {
         };
 
         'outer: loop {
-            let (mut remainder0, mut remainder1, denom1, altdenom1) = next_denom();
-            let (mut remainder2, mut remainder3, denom3, altdenom3) = next_denom();
-            let mut delta;
+            let (mut r0, mut r1, d1, d1a) = next_denom();
+            let (mut r2, mut r3, d3, d3a) = next_denom();
             for (term,sum) in term[firstnonzero..].iter_mut()
                           .zip(sum[firstnonzero..].iter_mut()) {
-                (*term, remainder0) = divmod_step!(*term, remainder0, $xinv*$xinv, $xinv*$xinv);
-                (delta, remainder1) = divmod_step!(*term, remainder1, denom1, &altdenom1);
-                *sum -= delta;
-                (*term, remainder2) = divmod_step!(*term, remainder2, $xinv*$xinv, $xinv*$xinv);
-                (delta, remainder3) = divmod_step!(*term, remainder3, denom3, &altdenom3);
-                *sum += delta;
+                *term = divmod_step!(r0, *term, $xinv*$xinv, $xinv*$xinv);
+                *sum -= divmod_step!(r1, *term, d1, &d1a);
+
+                *term = divmod_step!(r2, *term, $xinv*$xinv, $xinv*$xinv);
+                *sum += divmod_step!(r3, *term, d3, &d3a);
             }
 
             while term[firstnonzero] == 0 {
