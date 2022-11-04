@@ -160,7 +160,6 @@ macro_rules! atan {
             // k==0 case when initializing `term` and `sum` above.  When k is
             // even, (-1)^k==1, so we should add the term to our running sum;
             // when k is odd, (-1)^k==-1, so we should subtract the term instead.
-            // Also note that for even k, (2k+1)%4==1; and for odd k, (2k+1)%4==3.
             //
             // Here we compute and apply two terms of the Taylor series for each
             // pass through our multi-precision value.  The main reason is to
@@ -172,8 +171,8 @@ macro_rules! atan {
             // (of the variable which would track the 1 or -1 value) per
             // iteration would hurt performance within the innermost loop.
 
-            let (mut t1, mut s1, d1, d1a) = next_denom(); //d1%4==3 -> subtract
-            let (mut t2, mut s2, d2, d2a) = next_denom(); //d2%4==1 -> add
+            let (mut t1, mut s1, d1, d1a) = next_denom(); //k odd -> subtract
+            let (mut t2, mut s2, d2, d2a) = next_denom(); //k even -> add
             for (term,sum) in term[firstnonzero..].iter_mut()
                           .zip(sum[firstnonzero..].iter_mut()) {
                 *term = divmod_step!(t1, *term, $xinv*$xinv);
