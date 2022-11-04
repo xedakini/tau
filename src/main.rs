@@ -60,8 +60,8 @@ const WORDDIGITS: usize = 12;
 const DEFLINELEN: usize = 80;
 /// The number of lines to output if the user does not select a digit count.
 const DEFLINES:   usize = 2;
-/// The default scaling of atan(1) to use.  `SCALE_PI` is another popular choice.
-const DEFSCALE:   Xword = SCALE_TAU;
+/// The default scaling of atan(1) to use.
+const DEFSCALE:   Xword = SCALE_TAU; //SCALE_PI is another popular choice.
 
 // --- there ought to be no moving parts left below this point ---
 
