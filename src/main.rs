@@ -97,7 +97,7 @@ const_assert!(((Xword::MAX / (BASE+1)) as u64) < (usize::MAX as u64));
 
 /*
    The routines in this section are performance-critical, to the point
-   that we write two of them as macros — normal in-lining isn't aggressive
+   that we write both of them as macros — normal in-lining isn't aggressive
    enough.  We need the compiler to see that certain "variables" are in fact
    compile-time constants, and optimize accordingly.  (Multiplications are
    cheaper than divisions on (almost?) all platforms, and the compiler
@@ -115,22 +115,19 @@ const_assert!(((Xword::MAX / (BASE+1)) as u64) < (usize::MAX as u64));
    performance win!
 */
 
-// We write this as a macro so that the compiler will see that $xxinv is a compile-time constant.
-/// Compute the new value for the current "digit" of the current term in the Taylor series.
-macro_rules! next_atan_numerator {
-    ($term:expr, $residue:expr, $xxinv:expr) => {{
-        let v = $term + BASE*$residue;
-        (v/$xxinv, v%$xxinv)
+// We write this as a macro so that the compiler will see that either $alt_divisor
+// is a compile-time constant, or it is a libdivide::Divisor.  We then compute the
+// modulo via a multiplication: since no machine-DIV instruction was used for the
+// division (which might have given us the modulo at no additonal cost), we want
+// to obtain the remainder without having to do a DIV call now.
+/// Compute the next step of the multi-precision calculation.
+macro_rules! divmod_step {
+    ($old_value:expr, $cur_residue:expr, $divisor:expr, $alt_divisor:expr) => {{
+        let v = $old_value + BASE*$cur_residue;
+        let q = v / $alt_divisor; //might be int constant, might be libdivide::Divisor
+        let r = v - q*$divisor; //always an integer related to $alt_divisor
+        (q, r)
     }};
-}
-
-/// Compute the adjustment to the next "digit" in the running-sum of
-/// the terms of the Taylor series.
-#[inline]
-fn next_atan_term(term: Xword, residue: Xword, dinv: &Divider<Xword>, d: Xword) -> (Xword, Xword) {
-    let v = term + BASE*residue;
-    let q = v / dinv; //libdivide implements this division with multiplication-by-inverse logic
-    (q, v-q*d) //calculate the modulo using a multiplication
 }
 
 // This is only a macro to ensure that $xinv remains seen as a compile-time constant.
@@ -145,21 +142,21 @@ macro_rules! atan {
 
         let mut next_denom = || {
             denom += 2;
-            let inv = Divider::new(denom).expect("libdivide initialization error");
-            (0, 0, denom, inv)
+            let altdenom = Divider::new(denom).expect("libdivide initialization error");
+            (0, 0, denom, altdenom)
         };
 
         'outer: loop {
-            let (mut remainder0, mut remainder1, denom1, denom1inv) = next_denom();
-            let (mut remainder2, mut remainder3, denom3, denom3inv) = next_denom();
+            let (mut remainder0, mut remainder1, denom1, altdenom1) = next_denom();
+            let (mut remainder2, mut remainder3, denom3, altdenom3) = next_denom();
             let mut delta;
             for (term,sum) in term[firstnonzero..].iter_mut()
                           .zip(sum[firstnonzero..].iter_mut()) {
-                (*term, remainder0) = next_atan_numerator!(*term, remainder0, $xinv*$xinv);
-                (delta, remainder1) = next_atan_term(*term, remainder1, &denom1inv, denom1);
+                (*term, remainder0) = divmod_step!(*term, remainder0, $xinv*$xinv, $xinv*$xinv);
+                (delta, remainder1) = divmod_step!(*term, remainder1, denom1, &altdenom1);
                 *sum -= delta;
-                (*term, remainder2) = next_atan_numerator!(*term, remainder2, $xinv*$xinv);
-                (delta, remainder3) = next_atan_term(*term, remainder3, &denom3inv, denom3);
+                (*term, remainder2) = divmod_step!(*term, remainder2, $xinv*$xinv, $xinv*$xinv);
+                (delta, remainder3) = divmod_step!(*term, remainder3, denom3, &altdenom3);
                 *sum += delta;
             }
 
