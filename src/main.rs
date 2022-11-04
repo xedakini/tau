@@ -118,6 +118,9 @@ const_assert!(((Xword::MAX / (BASE+1)) as u64) < (usize::MAX as u64));
 // when $alt_divisor happens to be a compile-time constant.
 /// Compute the next step of the multi-precision calculation.
 macro_rules! divmod_step {
+    ($register:ident, $value:expr, $divisor:expr) => {
+        divmod_step!($register, $value, $divisor, $divisor)
+    };
     ($register:ident, $value:expr, $divisor:expr, $alt_divisor:expr) => {{
         debug_assert!($divisor / $alt_divisor == 1);
         $register += $value;
@@ -139,7 +142,7 @@ macro_rules! divmod_step {
 macro_rules! atan {
     ($nwords:expr, $scale:expr, $xinv:expr) => {{
         let mut term = Vec::new();
-        { let mut r = $scale; term.resize_with($nwords, ||{divmod_step!(r, 0, $xinv, $xinv)}) }
+        { let mut r = $scale; term.resize_with($nwords, ||{divmod_step!(r, 0, $xinv)}) }
 
         let (mut sum, mut firstnonzero, mut denom) = (term.to_vec(), 0, 1);
 
@@ -154,10 +157,10 @@ macro_rules! atan {
             let (mut r2, mut r3, d3, d3a) = next_denom();
             for (term,sum) in term[firstnonzero..].iter_mut()
                           .zip(sum[firstnonzero..].iter_mut()) {
-                *term = divmod_step!(r0, *term, $xinv*$xinv, $xinv*$xinv);
+                *term = divmod_step!(r0, *term, $xinv*$xinv);
                 *sum -= divmod_step!(r1, *term, d1, &d1a);
 
-                *term = divmod_step!(r2, *term, $xinv*$xinv, $xinv*$xinv);
+                *term = divmod_step!(r2, *term, $xinv*$xinv);
                 *sum += divmod_step!(r3, *term, d3, &d3a);
             }
 
