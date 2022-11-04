@@ -21,8 +21,7 @@
 //! Also note that the default has been changed here to compute 8&times;atan(1)
 //! (aka "tau") instead of 4&times;atan(1) (aka "pi").
 
-// override std::Result with anyhow::Result
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Result}; // override std::Result with anyhow::Result
 use libdivide::Divider; // for cheap amortized-cost repeated quasi-constant divisions
 use num::Integer; // for .div_ceil(), until tracking #88581 is resolved
 
