@@ -114,18 +114,22 @@ const_assert!(((Xword::MAX / (BASE+1)) as u64) < (usize::MAX as u64));
    performance win!
 */
 
-// We write this as a macro so that the compiler will see that either
-// $alt_divisor is a compile-time constant, or it is a libdivide::Divisor.
-// We then compute the modulo via a multiplication and a subtraction:
-// since no machine-DIV instruction was used for the division (which might
-// have given us the modulo at no additional cost), we want to obtain the
-// remainder without having to do a DIV call now either.
+// We write this as a macro so that the compiler will notice
+// when $alt_divisor happens to be a compile-time constant.
 /// Compute the next step of the multi-precision calculation.
 macro_rules! divmod_step {
     ($register:ident, $value:expr, $divisor:expr, $alt_divisor:expr) => {{
-        $register = $register * BASE + $value;
-        let q = $register / $alt_divisor; //might be int constant, might be libdivide::Divisor
-        $register -= q * $divisor; //where $divisor/$alt_divisor == 1
+        debug_assert!($divisor / $alt_divisor == 1);
+        $register += $value;
+        // The following division should compile as a multiply-by-inverse
+        // (at least in release builds) if $alt_divisor is an integer
+        // constant.  If $alt_divisor is of type &libdivide::Divisor then
+        // functionally the same thing happens (a MULT instead of a DIV
+        // machine instruction becomes the key operation), though with the
+        // overhead of a function call.
+        let q = $register / $alt_divisor;
+        $register -= q * $divisor; //aka: $register %= $divisor, but using multiplication
+        $register *= BASE; //pre-scale for next iteration
         q
     }};
 }
@@ -135,8 +139,7 @@ macro_rules! divmod_step {
 macro_rules! atan {
     ($nwords:expr, $scale:expr, $xinv:expr) => {{
         let mut term = Vec::new();
-        let mut r = $scale;
-        term.resize_with($nwords, || { let v = r / $xinv; r = r % $xinv * BASE; v });
+        { let mut r = $scale; term.resize_with($nwords, ||{divmod_step!(r, 0, $xinv, $xinv)}) }
 
         let (mut sum, mut firstnonzero, mut denom) = (term.to_vec(), 0, 1);
 
