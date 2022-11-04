@@ -172,15 +172,15 @@ macro_rules! atan {
             // (of the variable which would track the 1 or -1 value) per
             // iteration would hurt performance within the innermost loop.
 
-            let (mut r0, mut r1, d1, d1a) = next_denom(); //d1%4==3 -> subtract
-            let (mut r2, mut r3, d3, d3a) = next_denom(); //d2%4==1 -> add
+            let (mut t1, mut s1, d1, d1a) = next_denom(); //d1%4==3 -> subtract
+            let (mut t2, mut s2, d2, d2a) = next_denom(); //d2%4==1 -> add
             for (term,sum) in term[firstnonzero..].iter_mut()
                           .zip(sum[firstnonzero..].iter_mut()) {
-                *term = divmod_step!(r0, *term, $xinv*$xinv);
-                *sum -= divmod_step!(r1, *term, d1, &d1a);
+                *term = divmod_step!(t1, *term, $xinv*$xinv);
+                *sum -= divmod_step!(s1, *term, d1, &d1a);
 
-                *term = divmod_step!(r2, *term, $xinv*$xinv);
-                *sum += divmod_step!(r3, *term, d3, &d3a);
+                *term = divmod_step!(t2, *term, $xinv*$xinv);
+                *sum += divmod_step!(s2, *term, d2, &d2a);
             }
 
             while term[firstnonzero] == 0 {
