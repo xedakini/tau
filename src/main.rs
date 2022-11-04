@@ -82,7 +82,7 @@ const_assert!(((Xword::MAX / (BASE+1)) as u64) < (usize::MAX as u64));
    8 or 4 (respectively).
 
   The Taylor-Maclaurin series for atan(x) (when abs(x) <= 1) is:
-      atan(x) = \sum_0^\infty (-1)^n x^{2n+1} / {2n+1}
+      atan(x) = \sum_{k=0}^\infty (-1)^k x^{2k+1} / {2k+1}
               = x - x^3/3 + x^5/5 - ...
 
    The Taylor-Maclaurin series for atan(1) itself converges rather
@@ -114,8 +114,10 @@ const_assert!(((Xword::MAX / (BASE+1)) as u64) < (usize::MAX as u64));
    performance win!
 */
 
-// We write this as a macro so that the compiler will notice
-// when $alt_divisor happens to be a compile-time constant.
+// We write this as a macro so that the compiler will notice when $alt_divisor
+// happens to be a compile-time constant.  Additionally, this being a macro
+// gives the compiler an opportunity to micro-optimize the four-in-a-row
+// invocation that occurs in the main atan! loop.
 /// Compute the next step of the multi-precision calculation.
 macro_rules! divmod_step {
     ($register:ident, $value:expr, $divisor:expr) => {
@@ -153,8 +155,25 @@ macro_rules! atan {
         };
 
         'outer: loop {
-            let (mut r0, mut r1, d1, d1a) = next_denom();
-            let (mut r2, mut r3, d3, d3a) = next_denom();
+            // Recall that in the Taylor-Maclaurin series for atan(x), the k-th
+            // (zero-based) term is (-1)^k * x^(2k+1) / (2k+1).  We handled the
+            // k==0 case when initializing `term` and `sum` above.  When k is
+            // even, (-1)^k==1, so we should add the term to our running sum;
+            // when k is odd, (-1)^k==-1, so we should subtract the term instead.
+            // Also note that for even k, (2k+1)%4==1; and for odd k, (2k+1)%4==3.
+            //
+            // Here we compute and apply two terms of the Taylor series for each
+            // pass through our multi-precision value.  The main reason is to
+            // keep the alternating-sum logic simple, but we also get a minor
+            // loop-unrolling performance benefit.  In principle we could get
+            // the alternating-sum effect by always adding, and multiply the k-th
+            // term by (-1)^k; but even optimizing the exponentiation to a single
+            // negation operation per iteration, actually doing a multiplication
+            // (of the variable which would track the 1 or -1 value) per
+            // iteration would hurt performance within the innermost loop.
+
+            let (mut r0, mut r1, d1, d1a) = next_denom(); //d1%4==3 -> subtract
+            let (mut r2, mut r3, d3, d3a) = next_denom(); //d2%4==1 -> add
             for (term,sum) in term[firstnonzero..].iter_mut()
                           .zip(sum[firstnonzero..].iter_mut()) {
                 *term = divmod_step!(r0, *term, $xinv*$xinv);
