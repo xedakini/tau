@@ -22,7 +22,7 @@
 //! (aka "tau") instead of 4&times;atan(1) (aka "pi").
 
 use anyhow::{anyhow, Result}; // override std::Result with anyhow::Result
-use libdivide::Divider; // for cheap amortized-cost repeated quasi-constant divisions
+use libdivide::Divider; // to reduce the amortized cost of repeated quasi-constant divisions
 use num::Integer; // for .div_ceil(), until tracking #88581 is resolved
 
 // Name a couple of constants that might be helpful in the "customizable" section below.
@@ -107,7 +107,7 @@ const_assert!(((Xword::MAX / (BASE+1)) as u64) < (usize::MAX as u64));
 
    Furthermore, in the case where we do not have a compile-time constant,
    but we are dividing a (potentially long) vector of integers by the same
-   value (as we do for each "divide by 2*i+1" step in computing the Taylor
+   value (as we do for each "divide by 2*k+1" step in computing the Taylor
    series with our extended-precision math), the libdivide crate allows us
    to (in effect) compute a multiplicative inverse which can be used to
    achieve the bulk divisions using bulk multiplications instead — a big
@@ -120,9 +120,6 @@ const_assert!(((Xword::MAX / (BASE+1)) as u64) < (usize::MAX as u64));
 // invocation that occurs in the main atan! loop.
 /// Compute the next step of the multi-precision calculation.
 macro_rules! divmod_step {
-    ($register:ident, $value:expr, $divisor:expr) => {
-        divmod_step!($register, $value, $divisor, $divisor)
-    };
     ($register:ident, $value:expr, $divisor:expr, $alt_divisor:expr) => {{
         debug_assert!($divisor / $alt_divisor == 1);
         $register += $value;
@@ -134,9 +131,12 @@ macro_rules! divmod_step {
         // overhead of a function call.
         let q = $register / $alt_divisor;
         $register -= q * $divisor; //aka: $register %= $divisor, but using multiplication
-        $register *= BASE; //pre-scale for next iteration
+        $register *= BASE; //in anticipation of the next iteration
         q
     }};
+    ($register:ident, $value:expr, $divisor:expr) => {
+        divmod_step!($register, $value, $divisor, $divisor)
+    };
 }
 
 // This is only a macro to ensure that $xinv remains seen as a compile-time constant.
@@ -171,8 +171,8 @@ macro_rules! atan {
             // (of the variable which would track the 1 or -1 value) per
             // iteration would hurt performance within the innermost loop.
 
-            let (mut t1, mut s1, d1, d1a) = next_denom(); //k odd -> subtract
-            let (mut t2, mut s2, d2, d2a) = next_denom(); //k even -> add
+            let (mut t1, mut s1, d1, d1a) = next_denom(); //k odd, so subtract this term from sum
+            let (mut t2, mut s2, d2, d2a) = next_denom(); //k even, so add this term to sum
             for (term,sum) in term[firstnonzero..].iter_mut()
                           .zip(sum[firstnonzero..].iter_mut()) {
                 *term = divmod_step!(t1, *term, $xinv*$xinv);
@@ -220,8 +220,8 @@ fn get_nwords(digit_opt: Option<usize>, digit_param: Option<usize>,
             n
         } else {
             if linelen == 0 { return Err(anyhow!("--digits must be specified when --linelen=0")) };
-            let digits_per_line = linelen / (WORDDIGITS+1);
-            let n = digits_per_line * DEFLINES * WORDDIGITS;
+            let words_per_line = linelen / (WORDDIGITS+1);
+            let n = words_per_line * DEFLINES * WORDDIGITS;
             assert!(WORDDIGITS <= n && n <= maxdigits); //sanity check
             eprintln!("Using a default of {n} digits.");
             n
