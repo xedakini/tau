@@ -111,10 +111,6 @@ which \emph{doubles} the number of accurate digits with each iteration.
 But these approaches are not as easy to understand or implement as
 Taylor-series based approaches like the one used in this program.]
 
-Putting this all together and running calculations
-using multi-precision arithmetic with ``digit''s of base \texttt{BASE}
-is how this code accomplishes its task.
-
 
 \chapter{Error Analysis}
 Let
@@ -131,8 +127,8 @@ can be written as:
 Recall that if $a_i$ is a monotonically non-increasing sequence
 with $\lim_{i\to\infty} a_i = 0$,
 then the sum $\sum_{i=0}^\infty (-1)^i\, a_i$ converges;
-truncating this sum after term $n$
-will have an error whose magnitude is at most $a_{n+1}$.
+furthermore, truncating this sum after term $n$
+will result in an error whose magnitude is at most $a_{n+1}$.
 %((** double-check that all criteria are named and met **)
 Thus for $\atan x$, provided that $0 \le x \le 1$,
 the error incurred by truncating the series after the $n$-th term is:
@@ -273,7 +269,8 @@ Here
 \texttt{Xword::MAX} represents $\Imax$,
 $\texttt{WORDDIGITS} = \log_{10} B$;
 we require that \texttt{WORDDIGITS} be an integer,
-hence that we end up with $\texttt{BASE} = B$ below:
+and so $\texttt{BASE}$ in the code below
+is another name for what we called $B$ in the above derivation:
 \begin{verbatim}
      const BASE: Xword = (10 as Xword).pow(WORDDIGITS as u32);
      fn max_digits() -> Xword {
@@ -291,17 +288,19 @@ then instead of using $\log_{10}5 \approx \sfrac{339}{485}$
 we would use $\log_{10} 10 = 1$,
 which both simplifies the equation and allows for the safe
 computation of more digits.
-On the other hand, an attempt to compute $\atan(1)$ directly
-using the Taylor series would involve multiplying by
+
+If, instead, we chose to use the Taylor series
+to directly compute $\atan(1)$,
+we would be multiplying by
 $\log_{10} 1 = 0$ --- thus we would
 be limited to the fairly small
 quantity of $\log_{10}(R+1)$
 digits accurately computed
 before encountering integer overflow problems
-in some intermediate calculation;
-this is one of the reasons we seek and use a mathematically
+in some intermediate calculation.
+This is one of the reasons we seek and use a mathematically
 equivalent calculation which is more numerically stable
-(the other reason is that even if we had infinite-precision variables,
+(the other reason is that even if we had infinite-precision registers,
 the rate of convergence for a raw $\atan(1)$ is much too slow).
 
 \end{document}
