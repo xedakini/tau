@@ -308,6 +308,7 @@ fn main() -> Result<()> {
 
     // atan(1) = 8 atan(1/10) - atan(1/239) - 4 atan(1/515)
     let mut s = atan!(nwords, scale*8,  10);
+    #[allow(clippy::identity_op)]
     let  s239 = atan!(nwords, scale*1, 239);
     let  s515 = atan!(nwords, scale*4, 515);
 
