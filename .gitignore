@@ -3,3 +3,5 @@ Theory.aux
 Theory.log
 ,*
 *~
+**/*.rs.bk
+Cargo.lock
