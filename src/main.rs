@@ -253,7 +253,8 @@ fn parse_cmdline() -> Result<(usize, usize, Xword)> {
         opt digits:Option<usize>, desc:"the number of digits to compute";
         opt linelen:usize=DEFLINELEN, desc:"the (maximum) length of an output line";
         opt scale:Option<String>,
-              desc:"compute `scale`×atan(1); can specify 'tau', 'pi', or an integer";
+              desc:"compute `scale`×atan(1) for positive integer values of `scale`; \
+                    can also specify 'pi' or 'tau' to compute those constants (default is 'tau')";
         param ndigits:Option<usize>, desc:"the number of digits to compute (overrides -d)";
     }.parse_or_exit();
 
