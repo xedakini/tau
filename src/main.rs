@@ -23,7 +23,6 @@
 
 use anyhow::{anyhow, Result}; // override std::Result with anyhow::Result
 use libdivide::Divider; // to reduce the amortized cost of repeated quasi-constant divisions
-use num::Integer; // for .div_ceil(), until tracking #88581 is resolved
 
 // Name a couple of constants that might be helpful in the "customizable" section below.
 
@@ -239,8 +238,7 @@ fn get_nwords(digit_opt: Option<usize>, digit_param: Option<usize>,
 
     // convert requested number of digits to the number of Xwords we need to allocate
     let (integer_portion_words, error_terms_words) = (1, 1);
-    #[allow(unstable_name_collisions)]  //using div_ceil from num::Integer; clean-up when in std
-    let fraction_portion_words = digits.div_ceil(&WORDDIGITS);
+    let fraction_portion_words = digits.div_ceil(WORDDIGITS);
     let actual_digits = fraction_portion_words * WORDDIGITS;
     if digits != actual_digits { eprintln!("Rounding {digits} up to {actual_digits}") }
     Ok(integer_portion_words + fraction_portion_words + error_terms_words)
