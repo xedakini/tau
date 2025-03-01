@@ -291,7 +291,7 @@ fn printout(a: &[Xword], scale: Xword, linelen: usize) {
     print!(" = {int_part}.");
     let linelen = if linelen == 0 { usize::MAX } else { println!(); linelen };
     for line in a.chunks(linelen / (WORDDIGITS+1)) {
-        for v in line.iter() { print!(" {v:0>WORDDIGITS$}") }
+        for v in line { print!(" {v:0>WORDDIGITS$}") }
         println!();
     }
 }
@@ -325,6 +325,6 @@ fn main() -> Result<()> {
 
     let elapsed = cputime.elapsed();
     printout(&s, scale, linelen);
-    eprintln!("Computation time = {:.2?}", elapsed);
+    eprintln!("Computation time = {elapsed:.2?}");
     Ok(())
 }
