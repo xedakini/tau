@@ -50,7 +50,8 @@ const SCALE_PI:  Xword = 4;
 /// The basic type used for calculations.
 type Xword = i64;
 /// The number of decimal digits in each computation unit.
-const WORDDIGITS: usize = 12;
+const WORDDIGITS: u8 = 12;
+const WORDDIGITS_USIZE: usize = WORDDIGITS as usize;
 
 // define some default values:
 
@@ -69,8 +70,8 @@ const BASE: Xword = (10 as Xword).pow(WORDDIGITS as u32);
 
 use static_assertions::const_assert;
 const_assert!((-1 as Xword) < 0 && 0 < Xword::BITS); //Xword must be a signed integer type
-const_assert!(1 <= WORDDIGITS && WORDDIGITS < DEFLINELEN); //sanity constraints
-const_assert!(((Xword::MAX / (BASE+1)) as u64) < (usize::MAX as u64));
+const_assert!(1 <= WORDDIGITS && (WORDDIGITS_USIZE) < DEFLINELEN); //sanity constraints
+const_assert!(((Xword::MAX / (BASE+1)) as u64) < (usize::MAX as u64)); //XXX
 
 //-----------------------------------------------------------------
 /*
@@ -219,16 +220,16 @@ fn get_nwords(digit_opt: Option<usize>, digit_param: Option<usize>,
             n
         } else {
             if linelen == 0 { return Err(anyhow!("--digits must be specified when --linelen=0")) }
-            let words_per_line = linelen / (WORDDIGITS+1);
-            let n = words_per_line * DEFLINES * WORDDIGITS;
-            assert!(WORDDIGITS <= n && n <= maxdigits); //sanity check
+            let words_per_line = linelen / (WORDDIGITS_USIZE+1);
+            let n = words_per_line * DEFLINES * WORDDIGITS_USIZE;
+            assert!(WORDDIGITS_USIZE <= n && n <= maxdigits); //sanity check
             eprintln!("Using a default of {n} digits.");
             n
         };
     let digits =
         if digits == 0 {
             eprintln!("Setting to minimum of {WORDDIGITS} digits.");
-            WORDDIGITS
+            WORDDIGITS.into()
         } else if maxdigits < digits {
             eprintln!("Clamping to maximum of {maxdigits} digits.");
             maxdigits
@@ -238,8 +239,8 @@ fn get_nwords(digit_opt: Option<usize>, digit_param: Option<usize>,
 
     // convert requested number of digits to the number of Xwords we need to allocate
     let (integer_portion_words, error_terms_words) = (1, 1);
-    let fraction_portion_words = digits.div_ceil(WORDDIGITS);
-    let actual_digits = fraction_portion_words * WORDDIGITS;
+    let fraction_portion_words = digits.div_ceil(WORDDIGITS_USIZE);
+    let actual_digits = fraction_portion_words * WORDDIGITS_USIZE;
     if digits != actual_digits { eprintln!("Rounding {digits} up to {actual_digits}") }
     Ok(integer_portion_words + fraction_portion_words + error_terms_words)
 }
@@ -263,7 +264,7 @@ fn parse_cmdline() -> Result<(usize, usize, Xword)> {
     // pessimistic x=1/5.
     // Note that 339/485 is a slightly-smaller-than approximation of log10(5).
     let maxdigits = (Xword::MAX / (BASE+1) + 1) * 339 / 485;
-    let maxdigits = (maxdigits - maxdigits % (WORDDIGITS as Xword)) as usize;
+    let maxdigits = maxdigits - maxdigits % Xword::from(WORDDIGITS);
 
     if ! rest.is_empty() {
         return Err(anyhow!(
@@ -271,10 +272,10 @@ fn parse_cmdline() -> Result<(usize, usize, Xword)> {
              NumberOfDigits must be in the range {WORDDIGITS} to {maxdigits}.\n\
              Use \"--help\" for more options."));
     }
-    if args.linelen<=WORDDIGITS && args.linelen!=0 {
+    if args.linelen<=WORDDIGITS_USIZE && args.linelen!=0 {
         return Err(anyhow!("--linelen must be at least {}", WORDDIGITS+1));
     }
-    let nwords = get_nwords(args.digits, args.ndigits, args.linelen, maxdigits)?;
+    let nwords = get_nwords(args.digits, args.ndigits, args.linelen, maxdigits as usize)?;
     Ok((nwords, args.linelen, get_scale(args.scale)?))
 }
 
@@ -290,8 +291,8 @@ fn printout(a: &[Xword], scale: Xword, linelen: usize) {
     }
     print!(" = {int_part}.");
     let linelen = if linelen == 0 { usize::MAX } else { println!(); linelen };
-    for line in a.chunks(linelen / (WORDDIGITS+1)) {
-        for v in line { print!(" {v:0>WORDDIGITS$}") }
+    for line in a.chunks(linelen / (WORDDIGITS_USIZE+1)) {
+        for v in line { print!(" {v:0>WORDDIGITS_USIZE$}") }
         println!();
     }
 }
