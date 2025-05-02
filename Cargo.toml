@@ -1,18 +1,16 @@
 [package]
 name = "tau"
-version = "0.9.0"
+version = "0.9.1"
 authors = ["<xedakini@explicate.org>"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0"
-cpu-time = "1.0"
-libdivide = "0.4"
-num = "0.4"
-rustop = "1.1"
-static_assertions = "1.1"
+anyhow = "1.0" #error handling
+cpu-time = "1.0" #benchmarking
+libdivide = "0.4" #speed up division-by-constant-within-loop
+rustop = "1.1" #command-line processing
 
 [profile.release]
 lto = true

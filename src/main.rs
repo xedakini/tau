@@ -69,10 +69,9 @@ const DEFSCALE:   Xword = SCALE_TAU; //SCALE_PI is another popular choice.
 /// Computations are adjusted to be done relative to this base.
 const BASE: Xword = (10 as Xword).pow(WORDDIGITS as u32);
 
-use static_assertions::const_assert;
-const_assert!((-1 as Xword) < 0 && 0 < Xword::BITS); //Xword must be a signed integer type
-const_assert!(1 <= WORDDIGITS && (WORDDIGITS_USIZE) < DEFLINELEN); //sanity constraints
-const_assert!(((Xword::MAX / (BASE+1)) as u64) < (usize::MAX as u64)); //XXX
+const _:() = assert!((-1 as Xword) < 0 && 0 < Xword::BITS); //Xword must be a signed integer type
+const _:() = assert!(1 <= WORDDIGITS && (WORDDIGITS_USIZE) < DEFLINELEN); //sanity constraints
+const _:() = assert!(((Xword::MAX / (BASE+1)) as u64) < (usize::MAX as u64)); //XXX
 
 //-----------------------------------------------------------------
 /*
