@@ -146,7 +146,7 @@ macro_rules! atan {
         let mut term = Vec::new();
         { let mut r = $scale; term.resize_with($nwords, ||{divmod_step!(r, 0, $xinv)}) }
 
-        let (mut sum, mut firstnonzero, mut denom) = (term.to_vec(), 0, 1);
+        let (mut sum, mut firstnonzero, mut denom) = (term.clone(), 0, 1);
 
         let mut next_denom = || {
             denom += 2;
