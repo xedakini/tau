@@ -51,8 +51,6 @@ const SCALE_PI:  Xword = 4;
 type Xword = i64;
 /// The number of decimal digits in each computation unit.
 const WORDDIGITS: u8 = 12;
-/// The number of decimal digits in each computation unit; usize'd variant.
-const WORDDIGITS_USIZE: usize = WORDDIGITS as usize;
 
 // define some default values:
 
@@ -64,6 +62,9 @@ const DEFLINES:   usize = 2;
 const DEFSCALE:   Xword = SCALE_TAU; //SCALE_PI is another popular choice.
 
 // --- there ought to be no moving parts left below this point ---
+
+/// The number of decimal digits in each computation unit; usize'd variant.
+const WORDDIGITS_USIZE: usize = WORDDIGITS as usize;
 
 // derive "BASE" from WORDDIGITS
 /// Computations are adjusted to be done relative to this base.
