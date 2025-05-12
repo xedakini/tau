@@ -275,7 +275,7 @@ fn parse_cmdline() -> Result<(usize, usize, Xword)> {
     if args.linelen<=WORDDIGITS_USIZE && args.linelen!=0 {
         return Err(anyhow!("--linelen must be at least {}", WORDDIGITS+1));
     }
-    let nwords = get_nwords(args.digits, args.ndigits, args.linelen, maxdigits as usize)?;
+    let nwords = get_nwords(args.digits, args.ndigits, args.linelen, usize::try_from(maxdigits)?)?;
     Ok((nwords, args.linelen, get_scale(args.scale)?))
 }
 
