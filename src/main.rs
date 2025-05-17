@@ -298,6 +298,7 @@ fn printout(a: &[Xword], scale: Xword, linelen: usize) {
     }
 }
 
+#[expect(clippy::cognitive_complexity, reason="misleading complexity due to macro invocations")]
 fn main() -> Result<()> {
     let (nwords, linelen, scale) = parse_cmdline()?;
     let cputime = cpu_time::ProcessTime::now();
