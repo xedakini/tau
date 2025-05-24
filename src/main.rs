@@ -328,6 +328,7 @@ fn main() -> Result<()> {
 
     let elapsed = cputime.elapsed();
     printout(&s, scale, linelen);
-    eprintln!("Computation time = {elapsed:.2?}");
+    #[expect(clippy::use_debug, reason = "it's simple, and essentially debug anyway")]
+    { eprintln!("Computation time = {elapsed:.2?}") }
     Ok(())
 }
