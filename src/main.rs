@@ -264,8 +264,8 @@ fn parse_cmdline() -> Result<(usize, usize, Xword)> {
     // case is in fact x=1/10, but for now at least I'll stick with the more
     // pessimistic x=1/5.
     // Note that 339/485 is a slightly-smaller-than approximation of log10(5).
-    let maxdigits = (Xword::MAX / (BASE+1) + 1) * 339 / 485;
-    let maxdigits = maxdigits - maxdigits % Xword::from(WORDDIGITS);
+    let maxdigits = (Xword::MAX.cast_unsigned() / (BASE.cast_unsigned()+1) + 1) * 339 / 485;
+    let maxdigits = maxdigits - maxdigits % Xword::from(WORDDIGITS).cast_unsigned();
 
     if ! rest.is_empty() {
         return Err(anyhow!(
