@@ -1,0 +1,57 @@
+TL;DR: the "tau" program's documentation, and as much of its code as is
+attributable to xedakini, is hereby placed under the 0BSD License[1].
+The copyright licensing status of any vestiges of the C code written by
+Jason Stratos Papadopoulos are less clear.
+
+
+This code is at least morally, and *maybe* even legally, a derivative
+work of code written by Jason Stratos Papadopoulos and published to the
+Usenet group comp.lang.c in 1997:
+   https://groups.google.com/g/comp.lang.c/c/PsilyZ9LNGA/m/twL_M4dRIoMJ
+
+The included "tau.c" file, though tweaked by me, I consider to be
+fully derivative of the original comp.lang.c posting.  It can serve
+as a reference for anyone trying to decide how much of the Rust code
+is derivative vs. how much is novel.
+
+
+IANAL, and I am unclear on how much this rewrite in Rust is considered
+"derivative" and how much is considered "independent expression".
+The rewrite in Rust is much more radical than a mere mechanical translation
+from the C, but Mr. Papadopoulos's code definitely served as inspiration as
+to how to approach the problem of computing atan(1) to extended precision.
+[The distinction of Papadopoulos's being used to compute pi, rather than
+this code's preference for computing tau, is not relevant, as making
+this distinction involves only a trivial tweak in the code.]
+
+To the extent that this code is derivative, the licensing situation is
+somewhat ambiguous: posting to comp.lang.c certainly implied a certain
+amount of intent that the code could be copied and used; the posting
+also included a declaration of:
+    "give it to anyone you want, I don't care".
+This isn't quite an "Unlicense" or "WTFPL" declaration, but it seems to nod
+in that direction.  Personally, I've been treating it as-if it were a 0BSD
+license, with the additional constraint that credit must be given.
+
+To the extent that code here _is_ considered original to me, I release
+_my_ contribution(s) under the 0BSD License; to the extent that this
+code is considered derivative, one will have to decide for oneself what
+aspects of the code are derivative of Mr. Papadopoulos's code, and how
+his declaration may or may not inhibit your use of said code.
+
+
+[1] BSD 0-Clause License (0BSD), here applying to that portion of the
+    "tau" program attributable to the programmer known as xedakini:
+
+  Copyright (C) 2026 xedakini
+
+  Permission to use, copy, modify, and/or distribute this software for
+  any purpose with or without fee is hereby granted.
+
+  THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+  WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+  MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+  ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
+  AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
+  OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
